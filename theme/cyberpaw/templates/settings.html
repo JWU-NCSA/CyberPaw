@@ -109,6 +109,24 @@
                 </div>
               </form>
             {% endwith %}
+
+            {% set ref = cp_referral(Session.id) %}
+            <div class="clearfix"></div>
+            <hr>
+            <div class="mb-3" id="cp-referral">
+              <b class="d-block mb-1">Invite friends</b>
+              <p class="text-muted mb-2">
+                Get {{ ref.per_referral }} points for each friend who signs up with your link and solves a challenge
+                (up to {{ ref.cap }} points). They get {{ ref.new_player_points }} points too.
+              </p>
+              <div class="input-group mb-2">
+                <input class="form-control" id="cp-referral-link" value="{{ ref.link }}" readonly>
+                <button type="button" class="btn btn-outline-primary" id="cp-referral-copy"><i class="fas fa-copy"></i> Copy</button>
+              </div>
+              <small class="form-text text-muted">
+                {{ ref.points }} / {{ ref.cap }} points earned · {{ ref.counted }} friend{{ "" if ref.counted == 1 else "s" }} counted{% if ref.pending %} · {{ ref.pending }} signed up, waiting for a first solve{% endif %}
+              </small>
+            </div>
           </div>
         </div>
       </div>

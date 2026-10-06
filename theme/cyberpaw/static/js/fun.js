@@ -483,8 +483,26 @@
     });
   }
 
+  // ---------------------------------------------------------------- referral link copy button
+  function referralCopy() {
+    const button = document.getElementById("cp-referral-copy");
+    if (!button) return;
+    const input = document.getElementById("cp-referral-link");
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(input.value);
+      } catch (e) {
+        input.select();
+        document.execCommand("copy");
+      }
+      button.innerHTML = '<i class="fas fa-check"></i> Copied';
+      setTimeout(() => (button.innerHTML = '<i class="fas fa-copy"></i> Copy'), 2000);
+    });
+  }
+
   const start = () => {
     profileSettings();
+    referralCopy();
     oneTabConfirm();
     showMotd();
     homeActions();
