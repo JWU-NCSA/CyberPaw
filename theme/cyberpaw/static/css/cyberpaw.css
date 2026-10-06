@@ -28,6 +28,11 @@
   width: auto;
 }
 
+/* The platform puts the footer behind the page (z-index -20), so its links can't be clicked. */
+.footer {
+  z-index: 1;
+}
+
 /* Buttons and links follow the blue */
 .btn-primary {
   --bs-btn-bg: var(--cp-blue);

@@ -16,4 +16,4 @@ Andrew, Casandra, Chavis, Chris, EJ, Irene, Jackie, Jordan and Joseph. Their pho
 
 ## This site
 
-Rebuilt in 2026 by the JWU NCSA.
+Rebuilt in 2026 by the JWU NCSA. Current maintainer: [Andrew Cappelli](https://github.com/Andrew-most-likely).
