@@ -27,6 +27,7 @@ Also turns off the platform's API access tokens: the token endpoints return 404 
 an Authorization header is refused. The site's own pages use the session cookie, not tokens.
 """
 import hashlib
+import json
 import os
 import re
 
@@ -52,6 +53,8 @@ DEFAULT_WEBSITE = "https://www.jwu.edu"
 _SCRIPT_BLOCK = re.compile(r"(<script\b.*?</script>)", re.S | re.I)
 _DOCS_LINK = re.compile(r'href="https?://(?:docs\.|www\.)?ctfd\.io[^"]*"', re.I)
 _PLATFORM_NAME = re.compile(r"\bCTFd\b(?![.\w])")
+# /api/v1/users/<id>/awards and /api/v1/users/me/awards
+_USER_AWARDS = re.compile(r"^/api/v1/users/(\d+|me)/awards/?$")
 
 
 def scrub_platform_name(html):
@@ -152,6 +155,25 @@ def load(app):
         if user.email.lower() != email.lower():
             return render_template("confirm_login.html", wrong_account=True)
         return None
+
+    @app.after_request
+    def hide_hint_unlocks(response):
+        """Unlocking a hint is stored as an award (category "hints"). Players must not see who looked at
+        hints, so those are dropped from the user awards API for everyone but admins. Profile pages filter
+        them in the theme templates."""
+        if (
+            request.method == "GET"
+            and _USER_AWARDS.match(request.path)
+            and response.mimetype == "application/json"
+            and not is_admin()
+        ):
+            body = response.get_json(silent=True)
+            if isinstance(body, dict) and isinstance(body.get("data"), list):
+                body["data"] = [a for a in body["data"] if a.get("category") != "hints"]
+                if isinstance(body.get("meta"), dict) and "count" in body["meta"]:
+                    body["meta"]["count"] = len(body["data"])
+                response.set_data(json.dumps(body))
+        return response
 
     @app.before_request
     def challenges_need_login():

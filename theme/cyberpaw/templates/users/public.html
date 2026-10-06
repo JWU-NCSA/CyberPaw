@@ -1,4 +1,4 @@
-{# Derived from the platform's core theme users/public.html (see THIRD_PARTY_NOTICES). Country, affiliation, team, bracket, custom field and MajorLeagueCyber badges removed; avatar, bio and links added (components/cp_profile.html); solve/fail, category and score graphs removed. Re-check on platform upgrades. #}
+{# Derived from the platform's core theme users/public.html (see THIRD_PARTY_NOTICES). Country, affiliation, team, bracket, custom field and MajorLeagueCyber badges removed; avatar, bio and links added (components/cp_profile.html); solve/fail, category and score graphs removed; hint unlocks hidden from Awards. Re-check on platform upgrades. #}
 {% extends "base.html" %}
 
 {% block content %}
@@ -25,7 +25,8 @@
     {% include "components/errors.html" %}
 
     {% set solves = user.solves %}
-    {% set awards = user.awards %}
+    {# Hint unlocks are stored as awards (category "hints"); never show who looked at hints. #}
+    {% set awards = user.awards | rejectattr("category", "equalto", "hints") | list %}
     {% if solves or awards %}
 
       {% if awards %}
