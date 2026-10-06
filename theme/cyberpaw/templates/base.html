@@ -1,4 +1,4 @@
-{# Derived from the platform's core theme base.html (see THIRD_PARTY_NOTICES). Adds the CyberPaw footer and cyberpaw.css, fun.css and fun.js; notification popups and the "email unconfirmed" reminder removed (unconfirmed players are held on the confirm page). Re-check on platform upgrades. #}
+{# Derived from the platform's core theme base.html (see THIRD_PARTY_NOTICES). Adds the CyberPaw footer (with a Credits link) and cyberpaw.css, fun.css and fun.js; notification popups and the "email unconfirmed" reminder removed (unconfirmed players are held on the confirm page). Re-check on platform upgrades. #}
 <!DOCTYPE html>
 <html>
 <head>
@@ -52,7 +52,7 @@
 
 <footer class="footer">
   <div class="container text-center">
-    <small class="text-muted">JWU CyberPaw CTF</small>
+    <small class="text-muted">JWU CyberPaw CTF · <a class="text-muted" href="{{ request.script_root }}/credits">Credits</a></small>
   </div>
 </footer>
 

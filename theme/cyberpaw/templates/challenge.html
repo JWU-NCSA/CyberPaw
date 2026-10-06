@@ -1,4 +1,4 @@
-{# Derived from the platform's core theme challenge.html (see THIRD_PARTY_NOTICES). Adds the flag-result event and the First Paw badge; social share buttons removed. #}
+{# Derived from the platform's core theme challenge.html (see THIRD_PARTY_NOTICES). Adds the flag-result event and the First Paw badge; social share buttons removed; hints open through cpHint (js/fun.js), free hints without a cost label. #}
 <div :class="getStyles()" role="document" x-data="Challenge" x-init='id = {{ challenge.id }}; max_attempts = {{ max_attempts }}; attempts = {{ attempts }}; ratingValue = {{ (rating.get('value') if rating else None) | tojson }}; ratingReview = {{ (rating.get('review', '') if rating else None) | tojson }};'>
   <div class="modal-content">
     <div class="modal-body py-4 px-4 px-sm-5">
@@ -108,20 +108,22 @@
               <div class="challenge-hints hint-row row">
                 <div class="col-12 mb-3">
                 {% for hint in hints | sort(attribute="cost") %}
-                  <div x-data="Hint" x-init="id = {{ hint.id }}">
+                  {# Opened by cpHint in js/fun.js: free hints open right away, paid ones ask first. #}
+                  <div x-data="cpHint({{ hint.id }}, {{ hint.cost or 0 }})">
                     {% if hint.content %}
                     <details>
-                      <summary>{% trans %}View Hint{% endtrans %}{% if hint.title %}: {{ hint.title }}{% endif %}</summary>
+                      <summary>{{ hint.title or "Hint" }}</summary>
                       <div>{{ hint.html | safe }}</div>
                     </details>
                     {% else %}
-                    <details @toggle="showHint(event)">
-                      {% if hint.title %}
-                      <summary>{{ hint.title }} (Cost: {{ hint.cost }} point{{ hint.cost|pluralize }})</summary>
+                    <details @toggle="toggle($event)">
+                      {% if hint.cost %}
+                      <summary>{{ hint.title or "Hint" }} (costs {{ hint.cost }} point{{ hint.cost|pluralize }})</summary>
                       {% else %}
-                      <summary>Unlock Hint for {{ hint.cost }} point{{ hint.cost|pluralize }}</summary>
+                      <summary>{{ hint.title or "Hint" }}</summary>
                       {% endif %}
                       <div x-html="html"></div>
+                      <div class="text-danger small" x-show="error" x-text="error"></div>
                     </details>
                     {% endif %}
                   </div>

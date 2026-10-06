@@ -294,9 +294,11 @@ config/postfix-setup.sh       send-only mail server with DKIM, JWU recipients on
 config/cloudflared.service    Cloudflare tunnel service
 theme/cyberpaw/               site theme: templates, CSS, JavaScript
 theme/assets/                 logos and favicon
-theme/pages/                  starting text for How to Play, Rules and Privacy Notice
+theme/pages/                  starting text for How to Play, Rules, Privacy Notice and Credits
+theme/assets/credits/         original CyberPaw team photos (Credits page; see CREDITS.md)
 theme/index.html, motd.html   home page and the rules pop-up shown once to each player
 plugins/cyberpaw/             site plugin: difficulty, First Paw bonus, profiles, emails, admin pages
 scripts/apply-config.sh       applies the CyberPaw settings (step 8)
 scripts/seed-demo.sh          fake data for previews
+.github/workflows/            secret scan on every push
 ```

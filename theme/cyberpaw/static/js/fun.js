@@ -396,6 +396,46 @@
     setTimeout(() => toast("Email confirmed! 🐾 You can close your other CyberPaw tab."), 300);
   }
 
+  // ---------------------------------------------------------------- hints
+  // The platform's "unlock this hint?" popup doesn't open in this theme, so hints are unlocked here. Free hints
+  // (cost 0) open straight away; paid hints ask first. Used by templates/challenge.html as x-data="cpHint(id, cost)".
+  window.cpHint = (id, cost) => ({
+    html: null,
+    error: "",
+    async toggle(event) {
+      const details = event.target;
+      if (!details.open || this.html) return;
+      this.error = "";
+      const headers = { "Content-Type": "application/json", "CSRF-Token": window.init.csrfNonce };
+      const getHint = async () => (await (await fetch(`${root}/api/v1/hints/${id}`, { credentials: "same-origin" })).json()).data || {};
+      try {
+        let hint = await getHint();
+        if (!hint.content) {
+          if (cost > 0 && !window.confirm(`Unlock this hint for ${cost} point${cost === 1 ? "" : "s"}?`)) {
+            details.open = false;
+            return;
+          }
+          const res = await fetch(`${root}/api/v1/unlocks`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers,
+            body: JSON.stringify({ target: id, type: "hints" }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || !json.success) {
+            const errors = json.errors ? Object.values(json.errors).flat() : [];
+            this.error = errors[0] || json.message || "Couldn't open this hint.";
+            return;
+          }
+          hint = await getHint();
+        }
+        this.html = hint.html || "";
+      } catch (e) {
+        this.error = "Couldn't open this hint. Try again.";
+      }
+    },
+  });
+
   // ---------------------------------------------------------------- profile settings
   // Avatar, bio, GitHub and LinkedIn are stored by the cyberpaw plugin, not the platform, so they are saved
   // with their own request when the settings form is submitted.

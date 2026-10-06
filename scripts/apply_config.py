@@ -3,8 +3,8 @@
 Runs inside the web container (see apply-config.sh). Safe to re-run: uploads use
 fixed locations, so each run overwrites the previous files instead of adding new ones.
 
-SETTINGS are always applied. DEFAULTS, the logos, the message of the day and the Rules, How to Play and
-Privacy Notice pages are only filled in when empty, so edits made in the admin panel stay. The home
+SETTINGS are always applied. DEFAULTS, the logos, the message of the day and the Rules, How to Play,
+Privacy Notice and Credits pages are only filled in when empty, so edits made in the admin panel stay. The home
 page layout (index.html) is always replaced.
 
 Usage: python apply_config.py <theme_dir>
@@ -129,6 +129,11 @@ with app.app_context():
     shield = upload("jwu-shield.png")
     icon = upload("favicon.png")
     logo_url = f"/files/{logo}"
+    # Original CyberPaw team photos for the Credits page.
+    credits_dir = os.path.join(theme_dir, "assets", "credits")
+    for name in sorted(os.listdir(credits_dir)):
+        with open(os.path.join(credits_dir, name), "rb") as f:
+            upload_file(file=FileStorage(stream=f, filename=name), location=f"cyberpaw-credits/{name}")
 
     for key, value in SETTINGS.items():
         set_config(key, value)
@@ -148,6 +153,13 @@ with app.app_context():
                 route=route, title=title, content=read(f"pages/{route}.md", logo_url), format="markdown",
                 draft=False, hidden=hidden, auth_required=False,
             ))
+
+    # Credits for the creators of the original CyberPaw (required). Linked from the footer, not the navbar.
+    if Pages.query.filter_by(route="credits").first() is None:
+        db.session.add(Pages(
+            route="credits", title="Credits", format="html", draft=False, hidden=True, auth_required=False,
+            content=read("pages/credits.html", logo_url).replace("{{CREDITS_URL}}", "/files/cyberpaw-credits"),
+        ))
 
     # Message of the day: shown once to each player (js/fun.js) until its version changes.
     set_if_missing("theme_footer", read("motd.html", logo_url))
