@@ -189,6 +189,15 @@ def load(app):
         return None
 
     @app.before_request
+    def printed_qr_code():
+        """The pre-printed QR code (flyers, posters) points to jwucyberlab.org/pages/cyberpaw, which isn't a
+        page on this site. Send it to the home page. Keep this while those QR codes are still in circulation.
+        302, not 301, so browsers don't cache it and the target can still be changed later."""
+        if request.path.rstrip("/").lower() == "/pages/cyberpaw":
+            return redirect(url_for("views.static_html"), code=302)
+        return None
+
+    @app.before_request
     def disable_api_tokens():
         if request.path.rstrip("/").startswith("/api/v1/tokens"):
             abort(404)
