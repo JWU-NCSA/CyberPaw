@@ -154,6 +154,14 @@ def load(app):
         return None
 
     @app.before_request
+    def challenges_need_login():
+        """Guests opening /challenges go to the login page, like /users and /scoreboard. Without this the
+        platform answers 403 Forbidden before the competition starts."""
+        if request.endpoint == "challenges.listing" and not authed():
+            return redirect(url_for("auth.login", next=request.path))
+        return None
+
+    @app.before_request
     def disable_api_tokens():
         if request.path.rstrip("/").startswith("/api/v1/tokens"):
             abort(404)
