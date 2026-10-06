@@ -4,9 +4,6 @@ How to go from nothing to a fully working CyberPaw site ([jwucyberlab.org](https
 virtual machine. Follow the steps in order. Every command is meant to be copied exactly. Lines in `<ANGLE
 BRACKETS>` are values you fill in.
 
-The site is the open-source CTFd platform (Docker image `ctfd/ctfd:3.8.8`) with the CyberPaw theme and plugin
-from this repo. Upstream licenses are in `THIRD_PARTY_NOTICES`.
-
 ## 0. What you need before you start
 
 | Item | Where it comes from |
