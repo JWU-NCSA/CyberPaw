@@ -62,9 +62,9 @@ body::after {
   z-index: -1;
   pointer-events: none;
 }
+/* On phones there is no empty corner, so the lock would cover text. */
 @media (max-width: 768px) {
   body::after {
-    width: 200px;
-    height: 115px;
+    display: none;
   }
 }

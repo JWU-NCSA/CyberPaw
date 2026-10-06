@@ -14,6 +14,10 @@ Andrew, Casandra, Chavis, Chris, EJ, Irene, Jackie, Jordan and Joseph. Their pho
 - [drdr3y](https://github.com/drdr3y)
 - [cdrey0x](https://github.com/cdrey0x)
 
+## Current maintainer
+
+[Andrew Cappelli](https://github.com/Andrew-most-likely) (photo: `theme/assets/credits/andrew-cappelli.jpeg`).
+
 ## This site
 
-Rebuilt in 2026 by the JWU NCSA. Current maintainer: [Andrew Cappelli](https://github.com/Andrew-most-likely).
+Rebuilt in 2026 by the JWU NCSA.

@@ -440,3 +440,24 @@ main:has(.cp-home) {
   margin-top: 0.5rem;
   font-weight: 600;
 }
+
+/* Phones: tighter text pages, three credits photos per row */
+@media (max-width: 576px) {
+  .cp-doc {
+    margin: 1rem auto 2rem;
+    padding: 1.25rem 1rem;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .cp-credits {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem 0.5rem;
+  }
+  .cp-credit img {
+    width: 84px;
+    height: 84px;
+  }
+  .cp-credit-name {
+    font-size: 0.9rem;
+  }
+}
