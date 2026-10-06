@@ -91,6 +91,20 @@ def home():
     return render("home.html", **page_context())
 
 
+# System graph: a map of every server, service and file behind the site. It names internal details, so it
+# is never committed (the repo is public). An admin copies it to this path on the server; see .gitignore.
+SYSTEM_GRAPH = os.path.join(os.path.dirname(__file__), "system-graph.html")
+
+
+@admin_pages.route("/admin/cyberpaw/graph")
+@admins_only
+def system_graph():
+    if not os.path.isfile(SYSTEM_GRAPH):
+        abort(404)
+    with open(SYSTEM_GRAPH) as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"}
+
+
 # The switches on the admin home call these with JSON {"on": true|false} and get the new state back.
 def switch_value():
     body = request.get_json(silent=True) or {}
