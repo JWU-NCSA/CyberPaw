@@ -1,0 +1,20 @@
+{# CyberPaw profile header: generated avatar, bio and links (plugins/cyberpaw/profile.py). Used by users/public.html and users/private.html. #}
+{% set cp = cp_profile(user.id) %}
+<img class="cp-avatar cp-avatar-lg mb-3" src="{{ cp_avatar_url(user.id) }}" alt="" width="112" height="112">
+<h1>{{ user.name }}</h1>
+{% if cp.bio %}
+  <p class="cp-bio lead mx-auto">{{ cp.bio }}</p>
+{% endif %}
+{% if user.website or cp.github or cp.linkedin %}
+  <div class="cp-links">
+    {% if user.website and (user.website.startswith('http://') or user.website.startswith('https://')) %}
+      <a href="{{ user.website }}" target="_blank" rel="noopener nofollow ugc"><i class="fas fa-link"></i> {{ user.website | cp_link_text }}</a>
+    {% endif %}
+    {% if cp.github %}
+      <a href="https://github.com/{{ cp.github }}" target="_blank" rel="noopener nofollow ugc"><i class="fab fa-github"></i> github.com/{{ cp.github }}</a>
+    {% endif %}
+    {% if cp.linkedin %}
+      <a href="https://www.linkedin.com/in/{{ cp.linkedin }}" target="_blank" rel="noopener nofollow ugc"><i class="fab fa-linkedin"></i> linkedin.com/in/{{ cp.linkedin }}</a>
+    {% endif %}
+  </div>
+{% endif %}

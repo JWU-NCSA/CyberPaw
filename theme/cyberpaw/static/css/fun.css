@@ -1,0 +1,419 @@
+/* CyberPaw extras for players (see js/fun.js). */
+
+/* Paw-print loading spinner instead of the plain circle */
+.spinner.fa-circle-notch::before {
+  content: "\f1b0";
+}
+.spinner.fa-spin {
+  animation: cp-paw-bounce 0.9s ease-in-out infinite;
+  color: var(--cp-blue);
+}
+@keyframes cp-paw-bounce {
+  0%, 100% { transform: translateY(0) rotate(-12deg); }
+  50% { transform: translateY(-14px) rotate(12deg); }
+}
+
+/* Effects canvas (confetti, paw rain) */
+.cp-fx {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 2000;
+}
+
+/* Toasts */
+.cp-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translate(-50%, 1.5rem);
+  opacity: 0;
+  background: var(--cp-blue);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+  z-index: 2001;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.cp-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Wrong flag: shake the input */
+.cp-shake {
+  animation: cp-shake 0.45s ease-in-out;
+  border-color: #f56c6c !important;
+}
+@keyframes cp-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+/* Rank chip in the navbar */
+.cp-rank {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.cp-rank:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.cp-bump {
+  animation: cp-bump 1.2s ease-out;
+}
+@keyframes cp-bump {
+  0% { transform: scale(1); background: var(--cp-gold); color: #000 !important; }
+  30% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* First Paw badge */
+.cp-first-paw {
+  background: var(--cp-gold);
+  color: #1b1b1b;
+  font-weight: 600;
+}
+.cp-first-paw-row td {
+  background: rgba(245, 176, 33, 0.12) !important;
+}
+.cp-paw-shelf {
+  margin-top: 1rem;
+}
+.cp-paw-shelf-title {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+/* Challenge list: hover lift, hard challenges pulse */
+.cp-table tbody tr {
+  transition: background-color 0.15s;
+}
+.cp-table tbody tr:hover {
+  background: rgba(38, 100, 162, 0.06);
+}
+.cp-chal-btn {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cp-chal-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(38, 100, 162, 0.2);
+}
+.cp-table tbody tr:hover .cp-d5 i.on {
+  animation: cp-pulse 0.8s ease-in-out infinite;
+}
+@keyframes cp-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+
+/* Category progress */
+.cp-progress {
+  width: 140px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bs-secondary-bg);
+  overflow: hidden;
+}
+.cp-progress > div {
+  height: 100%;
+  background: var(--cp-blue);
+  transition: width 0.6s ease;
+}
+.cp-progress.done > div {
+  background: #67c23a;
+}
+.cp-progress-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--bs-secondary-color);
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+/* Typing tagline caret */
+[data-cp-typing]::after {
+  content: "▍";
+  margin-left: 2px;
+  animation: cp-caret 1s steps(1) infinite;
+  color: var(--cp-gold);
+}
+@keyframes cp-caret {
+  50% { opacity: 0; }
+}
+
+/* 404 */
+.cp-404 {
+  padding: 4rem 0;
+}
+.cp-404 h1 {
+  font-size: 5rem;
+  font-weight: 700;
+  color: var(--cp-blue);
+}
+.cp-404-paws {
+  font-size: 3rem;
+  animation: cp-paw-bounce 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner.fa-spin,
+  .cp-404-paws,
+  .cp-bump,
+  .cp-shake,
+  [data-cp-typing]::after {
+    animation: none;
+  }
+}
+
+/* Message of the day */
+.cp-motd-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 30, 52, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 2100;
+}
+.cp-motd {
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  border-top: 6px solid var(--cp-blue);
+  border-radius: 0.6rem;
+  padding: 1.75rem;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.cp-motd li {
+  margin-bottom: 0.4rem;
+}
+
+/* Text pages (How to Play, Rules, Privacy Notice) */
+.cp-doc {
+  max-width: 820px;
+  margin: 2.5rem auto 4rem;
+  padding: 2rem 2.25rem;
+  background: var(--bs-body-bg);
+  border-radius: 0.6rem;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08);
+  line-height: 1.65;
+}
+.cp-doc h1 {
+  color: var(--cp-blue);
+  margin-bottom: 1rem;
+}
+.cp-doc h2 {
+  font-size: 1.35rem;
+  margin-top: 2rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--cp-gold);
+}
+.cp-doc pre {
+  background: var(--bs-tertiary-bg);
+  border-left: 4px solid var(--cp-blue);
+  padding: 0.9rem 1.1rem;
+  border-radius: 0.3rem;
+  font-size: 1.05rem;
+}
+.cp-doc table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+}
+.cp-doc th,
+.cp-doc td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--bs-border-color);
+  vertical-align: top;
+}
+.cp-doc th {
+  background: var(--bs-tertiary-bg);
+}
+
+/* Home page: guest buttons (shown by js/fun.js) and competition status. The page is exactly one screen
+   tall (below the 66px navbar, above the 60px footer) and the logo shrinks to fit, so it never scrolls. */
+main:has(.cp-home) {
+  padding-top: 66px !important;
+  margin-bottom: 60px;
+}
+.cp-home {
+  height: calc(100dvh - 66px - 60px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.cp-home > * {
+  flex-shrink: 0;
+}
+.cp-home .cp-home-logo {
+  flex: 0 1 auto;
+  min-height: 60px;
+  max-height: 380px;
+  max-width: min(420px, 100%);
+  object-fit: contain;
+}
+.cp-home p {
+  margin-bottom: 0.4rem;
+}
+@media (max-height: 800px) {
+  .cp-home h1 { font-size: 1.9rem; }
+  .cp-home .lead { font-size: 1.05rem; }
+  .cp-countdown { padding: 0.7rem 1.2rem 0.85rem; }
+  .cp-clock { margin-top: 0.5rem; }
+  .cp-unit-value { font-size: 1.9rem; }
+  .cp-home .btn-lg { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+}
+[data-cp-guest]:not(.cp-show) {
+  display: none;
+}
+.cp-countdown {
+  display: inline-block;
+  padding: 1.1rem 1.6rem 1.25rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, var(--cp-blue), var(--cp-blue-dark));
+  color: #fff;
+  box-shadow: 0 6px 22px rgba(13, 75, 137, 0.28);
+  border-bottom: 4px solid var(--cp-gold);
+}
+.cp-countdown[data-state="over"] {
+  background: var(--bs-secondary-bg);
+  color: var(--bs-body-color);
+  box-shadow: none;
+  border-bottom-color: var(--bs-border-color);
+}
+.cp-countdown-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.cp-clock {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+.cp-clock[hidden] {
+  display: none;
+}
+.cp-unit[hidden] {
+  display: none;
+}
+.cp-unit {
+  min-width: 4.6rem;
+  padding: 0.55rem 0.4rem 0.45rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.cp-unit-value {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--cp-gold);
+}
+.cp-unit-name {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+.cp-tick {
+  animation: cp-tick 0.35s ease-out;
+}
+@keyframes cp-tick {
+  0% { transform: translateY(-6px); opacity: 0.3; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.cp-live-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: #67c23a;
+  box-shadow: 0 0 0 0 rgba(103, 194, 58, 0.7);
+  animation: cp-pulse 1.6s infinite;
+}
+@keyframes cp-pulse {
+  70% { box-shadow: 0 0 0 0.6rem rgba(103, 194, 58, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(103, 194, 58, 0); }
+}
+@media (max-width: 480px) {
+  .cp-countdown { padding: 0.9rem 0.8rem 1rem; }
+  .cp-clock { gap: 0.4rem; }
+  .cp-unit { min-width: 3.6rem; }
+  .cp-unit-value { font-size: 1.8rem; }
+}
+
+/* Profiles: generated avatars, bio and links (plugins/cyberpaw/profile.py) */
+.cp-avatar {
+  border-radius: 50%;
+  background: #f0f0f0;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+  image-rendering: pixelated;
+}
+.cp-avatar-sm {
+  width: 28px;
+  height: 28px;
+  border-width: 1px;
+}
+.cp-avatar-md {
+  width: 72px;
+  height: 72px;
+}
+.cp-avatar-lg {
+  width: 112px;
+  height: 112px;
+  border-color: var(--cp-gold);
+}
+.cp-bio {
+  max-width: 560px;
+  white-space: pre-line;
+}
+.cp-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  margin-top: 0.75rem;
+}
+.cp-links a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+}
+.cp-links a:hover {
+  color: var(--cp-blue);
+  text-decoration: underline;
+}
+.cp-links i {
+  color: var(--cp-blue);
+  margin-right: 0.2rem;
+}

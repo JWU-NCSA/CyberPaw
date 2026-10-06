@@ -1,0 +1,65 @@
+/* CyberPaw branding, loaded by templates/base.html. Colors come from the 2024 site.
+   The logo is uploaded to a fixed location by scripts/apply_config.py. */
+:root {
+  --cp-blue: #2664A2;
+  --cp-blue-dark: #0D4B89;
+  --cp-gold: #F5B021;
+}
+
+/* Navbar: blue bar, white links, darker blue on hover, white JWU shield as the brand logo */
+.navbar.bg-dark {
+  background-color: var(--cp-blue) !important;
+}
+.navbar.bg-dark {
+  --bs-navbar-color: #fff;
+  --bs-navbar-hover-color: #fff;
+}
+.navbar .nav-link {
+  color: #fff;
+}
+.navbar .nav-link:hover,
+.navbar .nav-link:focus {
+  background-color: var(--cp-blue-dark);
+  border-radius: 0.25rem;
+}
+.navbar .ctf_logo {
+  filter: invert(1);
+  height: 40px;
+  width: auto;
+}
+
+/* Buttons and links follow the blue */
+.btn-primary {
+  --bs-btn-bg: var(--cp-blue);
+  --bs-btn-border-color: var(--cp-blue);
+  --bs-btn-hover-bg: var(--cp-blue-dark);
+  --bs-btn-hover-border-color: var(--cp-blue-dark);
+  --bs-btn-active-bg: var(--cp-blue-dark);
+  --bs-btn-active-border-color: var(--cp-blue-dark);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--cp-blue);
+  --bs-btn-border-color: var(--cp-blue);
+  --bs-btn-hover-bg: var(--cp-blue);
+  --bs-btn-hover-border-color: var(--cp-blue);
+}
+
+/* CyberPaw lock pinned to the bottom-right corner, behind the content */
+body::after {
+  content: "";
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  height: 230px;
+  margin: 6px;
+  background: url("/files/cyberpaw/cyberpaw-logo.png") no-repeat right bottom / contain;
+  z-index: -1;
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  body::after {
+    width: 200px;
+    height: 115px;
+  }
+}

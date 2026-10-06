@@ -1,0 +1,17 @@
+# Cloudflare tunnel for jwucyberlab.org. Install to /etc/systemd/system/cloudflared.service.
+# Token: /etc/cloudflared/token (root only, never in git). Routes are set in the Cloudflare dashboard.
+# cloudflared is a pinned .deb held with `apt-mark hold`; auto-update is off.
+[Unit]
+Description=cloudflared
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+TimeoutStartSec=0
+Type=notify
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run --token-file /etc/cloudflared/token
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,99 @@
+{# Derived from the platform's core theme users/private.html (see THIRD_PARTY_NOTICES). Country, affiliation, team, bracket, custom field and MajorLeagueCyber badges removed; avatar, bio and links added (components/cp_profile.html); solve/fail, category and score graphs removed. Re-check on platform upgrades. #}
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="jumbotron">
+    <div class="container">
+      {% include "components/cp_profile.html" %}
+
+      <div>
+        <h2 class="text-center">
+          {% if account.place %}
+            {{ account.place }} <small>place</small>
+          {% endif %}
+        </h2>
+        <h2 class="text-center">
+          {% if account %}
+            {{ account.get_score(admin=True) }} <small>points</small>
+          {% endif %}
+        </h2>
+      </div>
+
+    </div>
+  </div>
+  <div class="container">
+    {% include "components/errors.html" %}
+
+    {% set solves = user.solves %}
+    {% set awards = user.awards %}
+
+    {% if solves or awards %}
+      {% if awards %}
+        <div class="row">
+          <div class="col-md-12">
+            <h3>{% trans %}Awards{% endtrans %}</h3>
+
+          </div>
+          {% for award in awards %}
+            <div class="col-md-3 col-sm-6">
+              <p class="text-center">
+                <i class="award-icon award-{{ award.icon }} fa-2x"></i>
+                <br>
+                <strong>{{ award.name }}</strong>
+              </p>
+              <p class="text-center">{{ award.category or "" }}</p>
+              <p class="text-center">{{ award.description or "" }}</p>
+              <p class="text-center">{{ award.value }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <br>
+
+      <div class="row">
+        <div class="col-md-12">
+          <h3>{% trans %}Solves{% endtrans %}</h3>
+          <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+              <th>{% trans %}Challenge{% endtrans %}</th>
+              <th class="d-none d-md-block d-lg-block">{% trans %}Category{% endtrans %}</th>
+              <th>{% trans %}Value{% endtrans %}</th>
+              <th>{% trans %}Time{% endtrans %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for solve in solves %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('challenges.listing') }}#{{ solve.challenge.name }}-{{ solve.challenge.id }}">
+                    {{ solve.challenge.name }}
+                  </a>
+                </td>
+                <td class="d-none d-md-block d-lg-block">{{ solve.challenge.category }}</td>
+                <td>{{ solve.challenge.value }}</td>
+                <td class="solve-time">
+                  <span data-time="{{ solve.date | isoformat }}"></span>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    {% else %}
+      <div class="row min-vh-25">
+        <h3 class="opacity-50 text-center w-100 justify-content-center align-self-center">
+          {% trans %}No solves yet{% endtrans %}
+        </h3>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/users/private.js") }}
+{% endblock %}
+

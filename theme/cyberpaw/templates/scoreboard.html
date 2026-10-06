@@ -1,0 +1,49 @@
+{# Derived from the platform's core theme scoreboard.html (see THIRD_PARTY_NOTICES). Bracket tabs and badges removed. Re-check on platform upgrades. #}
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="jumbotron">
+    <div class="container">
+      <h1>
+        {% trans %}Scoreboard{% endtrans %}
+      </h1>
+    </div>
+  </div>
+  <div class="container">
+    {% include "components/errors.html" %}
+
+    <div id="scoreboard" class="row" x-data="ScoreboardList">
+      <div class="col-md-12" x-show="standings.length">
+        <table class="table table-striped align-middle">
+          <thead>
+          <tr>
+            <th style="width: 10px">{% trans %}Place{% endtrans %}</th>
+            <th class="text-start ps-3">{{ get_mode_as_word(capitalize=True) }}</th>
+            <th>{% trans %}Score{% endtrans %}</th>
+          </tr>
+          </thead>
+
+          <tbody>
+            <template x-for="(standing, index) in standings">
+              <tr>
+                <th scope="row" class="text-center" x-text="index + 1"></th>
+                <td class="text-start">
+                  <a :href="standing.account_url" x-text="standing.name"></a>
+                </td>
+                <td x-text="standing.score"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col-md-12" x-show="! standings.length">
+        <h3 class="text-center text-muted">{% trans %}Scoreboard is empty{% endtrans %}</h3>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/scoreboard.js") }}
+{% endblock %}

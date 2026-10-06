@@ -1,0 +1,306 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+{% set add_open = errors or request.args.get('add') %}
+<div class="container cp-home">
+
+  {# Status: two switches and one line of numbers #}
+  <div class="cp-status">
+    <div class="custom-control custom-switch">
+      <input type="checkbox" class="custom-control-input cp-switch" id="cp-competition"
+             data-url="{{ url_for('cyberpaw_admin.set_competition') }}"
+             data-confirm-off="Pause the competition? Players won't be able to submit flags."
+             data-on-label="Running" data-off-label="Paused" {{ 'checked' if not paused }}>
+      <label class="custom-control-label" for="cp-competition">
+        Competition <span class="cp-switch-state">{{ "Paused" if paused else "Running" }}</span>
+      </label>
+    </div>
+    <div class="custom-control custom-switch">
+      <input type="checkbox" class="custom-control-input cp-switch" id="cp-registration"
+             data-url="{{ url_for('cyberpaw_admin.set_registration') }}"
+             data-on-label="Open" data-off-label="Closed" {{ 'checked' if registration_open }}>
+      <label class="custom-control-label" for="cp-registration">
+        Registration <span class="cp-switch-state">{{ "Open" if registration_open else "Closed" }}</span>
+      </label>
+    </div>
+    <div class="text-muted small ml-md-auto">{{ players }} players · {{ total_solves }} solves · {{ wrong_today }} wrong flags today</div>
+  </div>
+  {% if state[0] in ("Not started", "Ended") %}
+  <div class="small text-muted mb-3">The competition is {{ state[0]|lower }} according to its start/end times (Config → Start and End Time).</div>
+  {% endif %}
+
+  {% if request.args.get('created') %}
+  <div class="alert alert-success py-2">Challenge created.</div>
+  {% endif %}
+
+  <div class="d-flex align-items-center mb-3">
+    <button type="button" class="btn btn-primary" id="cp-add-toggle" aria-expanded="{{ 'true' if add_open else 'false' }}"
+            aria-controls="cp-new-challenge">+ Add challenge</button>
+    <input type="search" class="form-control ml-auto cp-search" id="cp-search" placeholder="Search challenges" aria-label="Search challenges">
+  </div>
+
+  {# Add challenge #}
+  <form method="POST" action="{{ url_for('cyberpaw_admin.new_challenge') }}" enctype="multipart/form-data"
+        class="card card-body mb-4 {{ '' if add_open else 'd-none' }}" id="cp-new-challenge">
+    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+    {% for error in errors %}
+    <div class="alert alert-danger py-2">{{ error }}</div>
+    {% endfor %}
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="cp-name">Name</label>
+        <input class="form-control" id="cp-name" name="name" maxlength="80" required value="{{ form.get('name', '') }}">
+      </div>
+      <div class="form-group col-md-6">
+        <label for="cp-category">Category</label>
+        <input class="form-control" id="cp-category" name="category" list="cp-categories" maxlength="80" required
+               value="{{ form.get('category', '') }}" placeholder="Pick one or type a new one">
+        <datalist id="cp-categories">
+          {% for c in categories %}<option value="{{ c }}">{% endfor %}
+        </datalist>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label id="cp-difficulty-label">Difficulty</label>
+        {% set level = (form.get('difficulty') or '0')|int %}
+        <input type="hidden" name="difficulty" id="cp-difficulty" value="{{ level }}">
+        <div class="cp-picker cp-d{{ level }}" role="radiogroup" aria-labelledby="cp-difficulty-label">
+          {% for n, label in difficulty_labels.items() %}
+          <button type="button" class="cp-pick {{ 'on' if n <= level }}" data-level="{{ n }}" role="radio"
+                  aria-checked="{{ 'true' if n == level else 'false' }}" title="{{ label }}">
+            <i class="fas fa-exclamation-triangle"></i>
+          </button>
+          {% endfor %}
+          <span class="small text-muted ml-2" id="cp-difficulty-text">{{ difficulty_labels.get(level, "Not set") }}</span>
+        </div>
+      </div>
+      <div class="form-group col-md-6" id="cp-fixed-fields">
+        <label for="cp-points">Points</label>
+        <input class="form-control" type="number" min="0" id="cp-points" name="points" value="{{ form.get('points', '100') }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="cp-description">Description <small class="text-muted">Markdown</small></label>
+      <textarea class="form-control" id="cp-description" name="description" rows="4">{{ form.get('description', '') }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="cp-flag">Flag</label>
+      <input class="form-control text-monospace" id="cp-flag" name="flag" required placeholder="CyberPaw{...}"
+             value="{{ form.get('flag', '') }}">
+      <small class="form-text text-warning d-none" id="cp-flag-format">Players are told every flag looks like <code>CyberPaw{...}</code>. This one doesn't.</small>
+    </div>
+
+    <div class="form-group">
+      <label>Files <small class="text-muted">optional</small></label>
+      <div class="cp-drop" id="cp-drop">
+        <input type="file" id="cp-files" name="files" multiple aria-label="Files for players to download">
+        <div class="cp-drop-text">Drop files here or <u>browse</u></div>
+        <ul class="cp-drop-list list-unstyled mb-0 small" id="cp-file-list"></ul>
+      </div>
+    </div>
+
+    {% set dynamic = form.get('scoring') == 'dynamic' %}
+    <div class="mb-3">
+      <div class="custom-control custom-switch mb-2">
+        <input type="checkbox" class="custom-control-input" id="cp-dynamic-toggle" {{ 'checked' if dynamic }}>
+        <label class="custom-control-label" for="cp-dynamic-toggle">Points drop as more players solve it</label>
+        <input type="hidden" name="scoring" id="cp-scoring" value="{{ 'dynamic' if dynamic else 'fixed' }}">
+        <input type="hidden" name="function" value="logarithmic">
+      </div>
+      <div class="form-row {{ '' if dynamic else 'd-none' }}" id="cp-dynamic-fields">
+        <div class="form-group col-4">
+          <label for="cp-initial" class="small">Start points</label>
+          <input class="form-control form-control-sm" type="number" min="1" id="cp-initial" name="initial" value="{{ form.get('initial', '500') }}">
+        </div>
+        <div class="form-group col-4">
+          <label for="cp-minimum" class="small">Lowest points</label>
+          <input class="form-control form-control-sm" type="number" min="0" id="cp-minimum" name="minimum" value="{{ form.get('minimum', '100') }}">
+        </div>
+        <div class="form-group col-4">
+          <label for="cp-decay" class="small">Solves until lowest</label>
+          <input class="form-control form-control-sm" type="number" min="1" id="cp-decay" name="decay" value="{{ form.get('decay', '15') }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center border-top pt-3">
+      <div class="custom-control custom-switch mr-auto">
+        <input type="checkbox" class="custom-control-input" name="visible" id="cp-visible" value="1" {{ 'checked' if form.get('visible') }}>
+        <label class="custom-control-label" for="cp-visible">Visible to players once created</label>
+      </div>
+      <button type="button" class="btn btn-link text-muted" id="cp-add-cancel">Cancel</button>
+      <button class="btn btn-primary" type="submit">Create challenge</button>
+    </div>
+  </form>
+
+  {# Challenges #}
+  {% if not categories %}
+  <p class="text-muted text-center py-5">No challenges yet. Add your first one above.</p>
+  {% endif %}
+  <p class="text-muted text-center py-4 d-none" id="cp-no-match">No challenges match your search.</p>
+
+  {% for category, items in categories.items() %}
+  {% set shown = items|selectattr('visible')|list|length %}
+  <section class="cp-category">
+    <header class="cp-category-head">
+      <h2 class="text-capitalize">{{ category }} <span class="text-muted">· {{ items|length }}</span></h2>
+      <span class="small text-muted cp-summary"><span class="cp-shown">{{ shown }}</span> shown · <span class="cp-hidden">{{ items|length - shown }}</span> hidden</span>
+    </header>
+    {% for c in items %}
+    <div class="cp-row {{ '' if c.visible else 'is-hidden' }}" id="chal-{{ c.id }}" data-name="{{ c.name|lower }} {{ category|lower }}">
+      <a class="cp-row-name" href="{{ url_for('admin.challenges_detail', challenge_id=c.id) }}" title="Edit challenge">{{ c.name }}</a>
+      <span class="cp-tri cp-d{{ c.difficulty }}" title="Difficulty {{ c.difficulty or 'not set' }}">
+        {% for n in range(1, 6) %}<i class="fas fa-exclamation-triangle {{ 'on' if n <= c.difficulty }}"></i>{% endfor %}
+      </span>
+      <span class="cp-row-meta">{{ c.value }} pts{% if c.dynamic %} <span title="Points drop as more players solve it">↓</span>{% endif %} · {{ c.solves }} solve{{ '' if c.solves == 1 else 's' }}</span>
+      <div class="custom-control custom-switch cp-row-switch">
+        <input type="checkbox" class="custom-control-input cp-switch cp-visibility" id="cp-vis-{{ c.id }}"
+               data-url="{{ url_for('cyberpaw_admin.set_challenge_visible', challenge_id=c.id) }}"
+               data-on-label="Shown" data-off-label="Hidden" {{ 'checked' if c.visible }}>
+        <label class="custom-control-label" for="cp-vis-{{ c.id }}"><span class="cp-switch-state">{{ "Shown" if c.visible else "Hidden" }}</span></label>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+
+    // Switches save immediately; on failure they flip back.
+    document.querySelectorAll(".cp-switch").forEach((input) => {
+      const label = input.parentElement.querySelector(".cp-switch-state");
+      const show = (on) => { if (label) label.textContent = on ? input.dataset.onLabel : input.dataset.offLabel; };
+      input.addEventListener("change", async () => {
+        const on = input.checked;
+        if (!on && input.dataset.confirmOff && !confirm(input.dataset.confirmOff)) {
+          input.checked = true;
+          return;
+        }
+        input.disabled = true;
+        show(on);
+        try {
+          const res = await fetch(input.dataset.url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json", "CSRF-Token": init.csrfNonce },
+            body: JSON.stringify({ on }),
+          });
+          if (!res.ok) throw new Error(res.status);
+          if (input.classList.contains("cp-visibility")) updateRow(input, on);
+        } catch (e) {
+          input.checked = !on;
+          show(!on);
+          alert("Could not save. Please reload the page and try again.");
+        } finally {
+          input.disabled = false;
+        }
+      });
+    });
+
+    function updateRow(input, visible) {
+      const row = input.closest(".cp-row");
+      row.classList.toggle("is-hidden", !visible);
+      const section = row.closest(".cp-category");
+      const rows = section.querySelectorAll(".cp-row");
+      const shown = section.querySelectorAll(".cp-row:not(.is-hidden)").length;
+      section.querySelector(".cp-shown").textContent = shown;
+      section.querySelector(".cp-hidden").textContent = rows.length - shown;
+    }
+
+    // Search filters rows by name and category.
+    $("cp-search").addEventListener("input", (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      let any = false;
+      document.querySelectorAll(".cp-category").forEach((section) => {
+        let sectionHas = false;
+        section.querySelectorAll(".cp-row").forEach((row) => {
+          const match = !q || row.dataset.name.includes(q);
+          row.classList.toggle("d-none", !match);
+          sectionHas = sectionHas || match;
+        });
+        section.classList.toggle("d-none", !sectionHas);
+        any = any || sectionHas;
+      });
+      $("cp-no-match").classList.toggle("d-none", any || !document.querySelector(".cp-category"));
+    });
+
+    // Add challenge form open/close.
+    const form = $("cp-new-challenge");
+    const addToggle = $("cp-add-toggle");
+    const setOpen = (open) => {
+      form.classList.toggle("d-none", !open);
+      addToggle.setAttribute("aria-expanded", String(open));
+      if (open) $("cp-name").focus();
+    };
+    addToggle.addEventListener("click", () => setOpen(form.classList.contains("d-none")));
+    $("cp-add-cancel").addEventListener("click", () => setOpen(false));
+
+    // Difficulty: click a triangle to pick 1-5, click the same one again to clear.
+    const labels = {{ difficulty_labels | tojson }};
+    const picker = document.querySelector(".cp-picker");
+    picker.addEventListener("click", (e) => {
+      const button = e.target.closest(".cp-pick");
+      if (!button) return;
+      const picked = Number(button.dataset.level);
+      const level = Number($("cp-difficulty").value) === picked ? 0 : picked;
+      $("cp-difficulty").value = level;
+      picker.className = `cp-picker cp-d${level}`;
+      picker.querySelectorAll(".cp-pick").forEach((b) => {
+        const n = Number(b.dataset.level);
+        b.classList.toggle("on", n <= level);
+        b.setAttribute("aria-checked", String(n === level));
+      });
+      $("cp-difficulty-text").textContent = labels[level] || "Not set";
+    });
+
+    // Warn when a flag doesn't follow the published CyberPaw{...} format.
+    const checkFlagFormat = () => {
+      const value = $("cp-flag").value.trim();
+      const off = value && !/^CyberPaw\{.+\}$/.test(value);
+      $("cp-flag-format").classList.toggle("d-none", !off);
+    };
+    $("cp-flag").addEventListener("input", checkFlagFormat);
+    checkFlagFormat();
+
+    // Decaying points replaces the fixed Points box.
+    const dynamicToggle = $("cp-dynamic-toggle");
+    const syncScoring = () => {
+      $("cp-scoring").value = dynamicToggle.checked ? "dynamic" : "fixed";
+      $("cp-dynamic-fields").classList.toggle("d-none", !dynamicToggle.checked);
+      $("cp-fixed-fields").classList.toggle("invisible", dynamicToggle.checked);
+    };
+    dynamicToggle.addEventListener("change", syncScoring);
+    syncScoring();
+
+    // File drop area: list the chosen files.
+    const files = $("cp-files");
+    const drop = $("cp-drop");
+    files.addEventListener("change", () => {
+      $("cp-file-list").innerHTML = "";
+      [...files.files].forEach((f) => {
+        const li = document.createElement("li");
+        li.textContent = `${f.name} (${Math.max(1, Math.round(f.size / 1024))} KB)`;
+        $("cp-file-list").append(li);
+      });
+    });
+    ["dragenter", "dragover"].forEach((t) => files.addEventListener(t, () => drop.classList.add("is-over")));
+    ["dragleave", "drop"].forEach((t) => files.addEventListener(t, () => drop.classList.remove("is-over")));
+
+    // Bring a newly created challenge into view.
+    if (location.hash) {
+      const row = document.querySelector(location.hash);
+      if (row) row.classList.add("is-new");
+    }
+  })();
+</script>
+{% endblock %}

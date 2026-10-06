@@ -1,0 +1,201 @@
+/* CyberPaw styling for the admin panel (Bootstrap 4). */
+:root {
+  --cp-blue: #2664A2;
+  --cp-blue-dark: #0D4B89;
+}
+
+.navbar.bg-dark {
+  background-color: var(--cp-blue) !important;
+}
+nav.navbar-dark .navbar-nav .nav-link {
+  color: #fff;
+}
+.navbar .nav-link:hover {
+  background-color: var(--cp-blue-dark);
+  border-radius: 0.25rem;
+}
+.navbar-brand {
+  font-weight: 600;
+}
+
+.jumbotron {
+  background-color: #e8f0f8;
+  padding: 2.5rem 1rem;
+}
+
+.btn-primary,
+.btn-primary:disabled {
+  background-color: var(--cp-blue);
+  border-color: var(--cp-blue);
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:not(:disabled):active {
+  background-color: var(--cp-blue-dark);
+  border-color: var(--cp-blue-dark);
+}
+.btn-outline-primary {
+  color: var(--cp-blue);
+  border-color: var(--cp-blue);
+}
+.btn-outline-primary:hover {
+  background-color: var(--cp-blue);
+  border-color: var(--cp-blue);
+}
+a {
+  color: var(--cp-blue);
+}
+
+/* CyberPaw admin home */
+.cp-home {
+  max-width: 900px;
+  padding-top: 2rem;
+  padding-bottom: 5rem;
+}
+/* The admin theme uses spaced capitals on buttons; keep them plain here. */
+.cp-home .btn {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+}
+.cp-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 2rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+.cp-switch-state {
+  color: #6c757d;
+  margin-left: 0.25rem;
+}
+.cp-search {
+  max-width: 260px;
+}
+
+/* Challenge list */
+.cp-category {
+  margin-top: 1.75rem;
+}
+.cp-category-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.4rem;
+}
+.cp-category-head h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+.cp-row {
+  display: grid;
+  grid-template-columns: 1fr 6.5rem 11rem 6.5rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 0.25rem;
+  border-bottom: 1px solid #f3f4f6;
+  scroll-margin-top: 90px;
+}
+.cp-row:hover {
+  background: #f8fafc;
+}
+.cp-row.is-hidden .cp-row-name,
+.cp-row.is-hidden .cp-row-meta {
+  color: #adb5bd;
+}
+.cp-row.is-new {
+  animation: cp-flash 2s ease-out;
+}
+@keyframes cp-flash {
+  from { background: #e3f0fb; }
+  to { background: transparent; }
+}
+.cp-row-name {
+  color: #212529;
+  font-weight: 500;
+}
+.cp-row-meta {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+.cp-row-switch {
+  justify-self: end;
+}
+@media (max-width: 576px) {
+  .cp-row {
+    grid-template-columns: 1fr auto;
+  }
+  .cp-row .cp-tri,
+  .cp-row-meta {
+    display: none;
+  }
+}
+
+/* Difficulty triangles (list and picker) */
+.cp-tri i {
+  color: #dee2e6;
+  margin-right: 1px;
+}
+.cp-d1 .on, .cp-d2 .on { color: #67c23a !important; }
+.cp-d3 .on, .cp-d4 .on { color: #FF9900 !important; }
+.cp-d5 .on { color: #f56c6c !important; }
+.cp-picker {
+  display: flex;
+  align-items: center;
+  height: calc(1.5em + 0.75rem + 2px);
+}
+.cp-pick {
+  border: 0;
+  background: none;
+  padding: 0 0.15rem;
+  font-size: 1.35rem;
+  color: #dee2e6;
+  line-height: 1;
+}
+.cp-pick:hover {
+  transform: scale(1.1);
+}
+
+/* File drop area */
+.cp-drop {
+  position: relative;
+  border: 2px dashed #ced4da;
+  border-radius: 0.4rem;
+  padding: 1.25rem;
+  text-align: center;
+  color: #6c757d;
+}
+.cp-drop.is-over {
+  border-color: var(--cp-blue);
+  background: #f0f6fc;
+}
+.cp-drop input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.cp-drop-list li {
+  margin-top: 0.35rem;
+  color: #212529;
+}
+.custom-control-input:checked ~ .custom-control-label::before {
+  background-color: var(--cp-blue);
+  border-color: var(--cp-blue);
+}
+.cp-category-head h2 {
+  letter-spacing: normal;
+  font-family: inherit;
+}
+.cp-back-to-site {
+  color: var(--cp-blue) !important;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}

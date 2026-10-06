@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <div class="cp-404 text-center">
+    <div class="cp-404-paws" aria-hidden="true">🐾</div>
+    <h1>404</h1>
+    <p class="lead">This page got pwned.</p>
+    <p class="text-muted">Whatever was here has been exfiltrated, deleted, or never existed in the first place.</p>
+    <a class="btn btn-primary mt-3" href="{{ url_for('challenges.listing') }}">Back to the challenges</a>
+  </div>
+</div>
+{% endblock %}

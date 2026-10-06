@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{#
+  CyberPaw challenges page: categories in an accordion, each a table with points, difficulty,
+  solves and tags, like the 2024 site. Only this template is overridden; every other page and all
+  JavaScript come from the core theme (THEME_FALLBACK). Difficulty comes from the cyberpaw plugin.
+#}
+
+{% block stylesheets %}
+  {{ super() }}
+  <style>
+    .cp-card { border: 0; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12); }
+    .cp-card-header {
+      display: grid; grid-template-columns: 50px 1fr 50px; align-items: center;
+      background: var(--cp-blue); color: #fff;
+    }
+    .cp-card-header h1 { font-size: 1.5rem; margin: 0; text-align: center; }
+    .cp-category + .cp-category { border-top: 1px solid var(--bs-border-color); }
+    .cp-category-toggle {
+      width: 100%; display: flex; justify-content: space-between; align-items: center;
+      padding: 0.9rem 1.25rem; background: none; border: 0; color: inherit;
+      font-size: 1.1rem; font-weight: 600; text-transform: capitalize;
+    }
+    .cp-category-toggle:hover { background: var(--bs-tertiary-bg); }
+    .cp-table th { font-size: 0.85rem; text-transform: uppercase; color: var(--bs-secondary-color); }
+    .cp-chal-btn { border: 1px solid var(--bs-border-color); text-align: left; }
+    .cp-chal-btn:hover { border-color: var(--cp-blue); color: var(--cp-blue); }
+    .cp-solved .cp-chal-btn { border-color: #67c23a; color: #67c23a; }
+    .cp-points { background: var(--cp-blue); font-size: 0.9rem; }
+    .cp-difficulty i { color: var(--bs-border-color); margin-right: 2px; }
+    .cp-d1 i.on, .cp-d2 i.on { color: #67c23a; }
+    .cp-d3 i.on, .cp-d4 i.on { color: #FF9900; }
+    .cp-d5 i.on { color: #f56c6c; }
+    .cp-tag { background: var(--bs-secondary-bg); color: var(--bs-body-color); font-weight: 500; }
+    #challenge-window .modal-dialog { max-width: 960px; }
+    #challenge-window .modal-header { background: var(--cp-blue); color: #fff; }
+    #challenge-window .modal-header .btn-close { filter: invert(1); }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="container py-4">
+    <div class="row">
+      <div class="col-md-12">
+        {% include "components/errors.html" %}
+      </div>
+    </div>
+
+    <div
+      x-data="ChallengeBoard"
+      @load-challenges.window="loadChallenges()"
+      @load-challenge.window="loadChallenge($event.detail)"
+    >
+      <div
+          x-ref="challengeWindow" id="challenge-window" class="modal fade" tabindex="-1" role="dialog" x-data=""
+          x-html="$store.challenge.data.view"
+      ></div>
+
+      <div
+        class="card cp-card"
+        x-data="{
+          open: null,
+          difficulty: {},
+          firstPaws: {},
+          clearedKey: null,
+          async getJson(path) {
+            try {
+              const r = await fetch('{{ request.script_root }}' + path, { credentials: 'same-origin' });
+              return r.ok ? (await r.json()).data : null;
+            } catch (e) { return null; }
+          },
+          async loadMeta() {
+            this.difficulty = (await this.getJson('/plugins/cyberpaw/api/difficulty')) || {};
+            const paws = (await this.getJson('/plugins/cyberpaw/api/first-paws')) || [];
+            this.firstPaws = Object.fromEntries(paws.map((c) => [c.id, true]));
+          },
+          solvedIn(category) { return this.getChallenges(category).filter((c) => c.solved_by_me).length; },
+          percentIn(category) {
+            const total = this.getChallenges(category).length;
+            return total ? Math.round((100 * this.solvedIn(category)) / total) : 0;
+          },
+        }"
+        x-init="loadMeta()"
+        @cp-flag-result.window="if ($event.detail.status === 'correct') setTimeout(() => loadMeta(), 800)"
+        x-effect="
+          if (loaded && open === null) open = getCategories()[0] ?? '';
+          if (loaded) {
+            const done = getCategories().filter((cat) => {
+              const list = getChallenges(cat);
+              return list.length && list.every((c) => c.solved_by_me);
+            });
+            const key = done.join('|');
+            if (clearedKey !== null && key !== clearedKey) {
+              done.filter((cat) => !clearedKey.split('|').includes(cat))
+                .forEach((cat) => window.dispatchEvent(new CustomEvent('cp-category-cleared', { detail: cat })));
+            }
+            if (key !== clearedKey) clearedKey = key;
+          }"
+      >
+        <div class="card-header cp-card-header">
+          <img src="{{ url_for('views.themes_beta', theme='cyberpaw', path='img/lock.png') }}" width="40" height="40" alt="">
+          <h1>{% trans %}Challenges{% endtrans %}</h1>
+          <img src="{{ url_for('views.themes_beta', theme='cyberpaw', path='img/lock.png') }}" width="40" height="40" alt="" class="justify-self-end ms-auto">
+        </div>
+
+        <div x-show="!loaded" class="text-center py-5">
+          <i class="fas fa-circle-notch fa-spin fa-3x fa-fw spinner"></i>
+        </div>
+
+        <div x-show="loaded">
+          <template x-for="category in getCategories()" :key="category">
+            <div class="cp-category">
+              <button
+                type="button"
+                class="cp-category-toggle"
+                @click="open = (open === category ? '' : category)"
+                :aria-expanded="open === category"
+              >
+                <span x-text="category"></span>
+                <span class="d-flex align-items-center ms-auto me-3">
+                  <span class="cp-progress-text me-2" x-text="solvedIn(category) + '/' + getChallenges(category).length + ' solved'"></span>
+                  <span class="cp-progress" :class="percentIn(category) === 100 ? 'done' : ''">
+                    <div :style="'width: ' + percentIn(category) + '%'"></div>
+                  </span>
+                </span>
+                <i class="fas" :class="open === category ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              </button>
+
+              <div x-show="open === category" class="table-responsive">
+                <table class="table cp-table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th class="ps-4">{% trans %}Challenge{% endtrans %}</th>
+                      <th>{% trans %}Points{% endtrans %}</th>
+                      <th class="d-none d-md-table-cell">Difficulty</th>
+                      <th class="d-none d-md-table-cell">{% trans %}Solves{% endtrans %}</th>
+                      <th class="d-none d-md-table-cell">{% trans %}Tags{% endtrans %}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="c in getChallenges(category)" :key="c.id">
+                      <tr :class="c.solved_by_me ? 'cp-solved' : ''">
+                        <td class="ps-4">
+                          <button type="button" class="btn cp-chal-btn" @click="loadChallenge(c.id)">
+                            <i x-show="c.solved_by_me" class="fas fa-check me-1"></i>
+                            <span x-text="c.name"></span>
+                            <span x-show="firstPaws[c.id]" class="ms-1" title="First Paw: you solved this one first">🐾</span>
+                          </button>
+                        </td>
+                        <td><span class="badge cp-points" x-text="c.value"></span></td>
+                        <td class="d-none d-md-table-cell">
+                          <span class="cp-difficulty" :class="'cp-d' + (difficulty[c.id] || 0)">
+                            <template x-for="n in 5" :key="n">
+                              <i class="fas fa-exclamation-triangle" :class="n <= (difficulty[c.id] || 0) ? 'on' : ''"></i>
+                            </template>
+                          </span>
+                        </td>
+                        <td class="d-none d-md-table-cell" x-text="c.solves || '-'"></td>
+                        <td class="d-none d-md-table-cell">
+                          <template x-for="t in c.tags" :key="t.value">
+                            <span class="badge cp-tag me-1" x-text="t.value"></span>
+                          </template>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/challenges.js") }}
+{% endblock %}

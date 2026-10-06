@@ -1,0 +1,27 @@
+{# Shown when a confirm link is opened in a browser that isn't logged in to that account (see the
+   cyberpaw plugin). Logging in brings the player back to the link, which then confirms the account. #}
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="jumbotron">
+    <div class="container">
+      <h1>Confirm your account</h1>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-md-8 col-lg-6 offset-md-2 offset-lg-3 text-center">
+        {% if wrong_account %}
+          <p class="lead">This confirmation link is for a different account than the one you're logged in to.</p>
+          <p>Log out, then open the link again and log in with the account it was sent to.</p>
+          <a class="btn btn-primary btn-lg px-5 my-3" href="{{ url_for('auth.logout') }}">Log out</a>
+        {% else %}
+          <p class="lead">Log in to confirm your JWU email address.</p>
+          <p class="text-muted">For your security, confirmation links only work while you're logged in.</p>
+          <a class="btn btn-primary btn-lg px-5 my-3" href="{{ url_for('auth.login', next=next_url) }}">Log in to confirm</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

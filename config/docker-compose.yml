@@ -1,0 +1,94 @@
+# CyberPaw CTF site: web app, MariaDB and Redis. Run from this directory with a filled-in .env.
+# The web image is the upstream platform image (see THIRD_PARTY_NOTICES), pinned to an exact version.
+name: cyberpaw
+
+services:
+  web:
+    image: ctfd/ctfd:3.8.8
+    restart: unless-stopped
+    ports:
+      # Localhost only, reached through the Cloudflare tunnel
+      # (jwucyberlab.org -> http://localhost:80, set in the Cloudflare dashboard).
+      - "127.0.0.1:80:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=mysql+pymysql://cyberpaw:${DB_PASSWORD}@db/cyberpaw
+      - REDIS_URL=redis://cache:6379
+      - UPLOAD_FOLDER=/var/uploads
+      - LOG_FOLDER=/var/log/cyberpaw
+      - WORKERS=${WORKERS:-2}
+      - ACCESS_LOG=-
+      - ERROR_LOG=-
+      - REVERSE_PROXY=true
+      # Lets the scripts in /tmp import the platform package.
+      - PYTHONPATH=/opt/CTFd
+      # No automatic calls home for new versions. Updates are done by hand.
+      - UPDATE_CHECK=false
+    volumes:
+      - uploads:/var/uploads
+      - logs:/var/log/cyberpaw
+      # CyberPaw theme and plugin from this repo. REPO_DIR is the repo checkout on the server.
+      - ${REPO_DIR:-..}/theme/cyberpaw:/opt/CTFd/CTFd/themes/cyberpaw:ro
+      - ${REPO_DIR:-..}/plugins/cyberpaw:/opt/CTFd/CTFd/plugins/cyberpaw:ro
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    extra_hosts:
+      # The VM itself, where Postfix listens (Config -> Email: host.docker.internal:25,
+      # set by scripts/apply_config.py; see config/postfix-setup.sh).
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - internal
+
+  # The web app runs as uid 1001 and needs to own its volumes.
+  permissions:
+    image: alpine:3.23
+    user: root
+    volumes:
+      - uploads:/var/uploads
+      - logs:/var/log/cyberpaw
+    command: chown -R 1001:1001 /var/uploads /var/log/cyberpaw
+
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MARIADB_USER=cyberpaw
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_DATABASE=cyberpaw
+      - MARIADB_AUTO_UPGRADE=1
+    volumes:
+      - db:/var/lib/mysql
+    command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci, --wait_timeout=28800, --log-warnings=0]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+    networks:
+      - internal
+
+volumes:
+  uploads:
+  logs:
+  db:
+  redis:
+
+networks:
+  default:
+  internal:
+    internal: true
