@@ -5,3 +5,6 @@
 # Python bytecode
 __pycache__/
 *.pyc
+
+# System graph for admins (internal details). Lives only on the server, never in git.
+plugins/cyberpaw/system-graph.html
