@@ -285,8 +285,10 @@ these differences:
 
 - Fake data only: `sudo bash scripts/seed-demo.sh` (demo users `demo-NN@jwu.edu`). Never copy production's
   database to it.
-- No mail server, so new sign-ups can't confirm their email. Test with the demo users, or turn off "Verify
-  emails" in Admin -> Config (`deploy.sh` turns it back on through `apply-config.sh`).
+- An empty file `/opt/cyberpaw/staging` marks the VM as staging. With it, `apply-config.sh` (and so every
+  `deploy.sh`) lets any email address sign up without confirming it and removes the mail server setting, so
+  staging never sends email. Never create this file on production.
+- Its own database, secrets and tunnel. Staging shares nothing with production and never connects to it.
 - Its own Cloudflare tunnel (`cyberpaw-staging`, hostname `staging.jwucyberlab.org`), set up like section 10,
   with a Cloudflare Access application in front of it.
 - The admin password is in `/root/staging-admin.txt` on the VM.
