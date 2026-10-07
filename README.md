@@ -259,19 +259,23 @@ The site is ready.
 
 ## Updating the site's code
 
-Every change goes through GitHub, then staging, then production. The servers only deploy commits that are
-on `main` in JWU-NCSA/CyberPaw and passed CI (`.github/workflows/ci.yml`: syntax checks and
-`scripts/smoke-test.sh`, which starts the whole site and checks the main pages) and the secret scan.
+Two branches in JWU-NCSA/CyberPaw: `staging` is what runs on the staging site, `main` is what runs on
+production. Changes always go to `staging` first. The servers only deploy the tip of their branch, and only
+when CI (`.github/workflows/ci.yml`: syntax checks and `scripts/smoke-test.sh`, which starts the whole site
+and checks the main pages) and the secret scan passed on it.
 
-1. Work on a branch and open a pull request to `main`. CI runs on it; merge when it passes and is approved.
-2. On the staging VM (`cyberpaw-staging`, VM 102), deploy the latest `main`:
+1. Make a branch from `staging` and open a pull request into `staging`. Merge when CI passes and it is
+   approved.
+2. On the staging VM (`cyberpaw-staging`, VM 102):
    ```
    cd /opt/cyberpaw/repo && sudo bash scripts/deploy.sh staging
    ```
 3. Test it at https://staging.jwucyberlab.org (behind a Cloudflare Access login for officers).
-4. On the production VM, deploy the same commit. `deploy.sh staging` prints the exact command:
+4. Open a pull request from `staging` into `main` (CI refuses pull requests into `main` from any other branch)
+   and merge it when CI passes.
+5. On the production VM:
    ```
-   cd /opt/cyberpaw/repo && sudo bash scripts/deploy.sh promote <commit>
+   cd /opt/cyberpaw/repo && sudo bash scripts/deploy.sh prod
    ```
 
 `deploy.sh` checks out the commit, updates `/opt/cyberpaw/docker-compose.yml` if it changed, restarts the
