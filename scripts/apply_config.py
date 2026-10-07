@@ -7,7 +7,9 @@ SETTINGS are always applied. DEFAULTS, the logos, the message of the day and the
 Privacy Notice and Credits pages are only filled in when empty, so edits made in the admin panel stay. The home
 page layout (index.html) is always replaced.
 
-Usage: python apply_config.py <theme_dir>
+Usage: python apply_config.py <theme_dir> [--staging]
+
+--staging (the staging VM, see apply-config.sh) also applies STAGING last.
 """
 import os
 import sys
@@ -102,7 +104,15 @@ DEFAULTS = {
     ),
 }
 
+# Staging VM only: any email address, no confirmation, and no mail server, so staging never sends email.
+STAGING = {
+    "verify_emails": False,
+    "domain_whitelist": "",
+    "mail_server": "",
+}
+
 theme_dir = sys.argv[1]
+staging = "--staging" in sys.argv[2:]
 
 
 def set_if_missing(key, value):
@@ -142,6 +152,9 @@ with app.app_context():
     set_if_missing("ctf_logo", shield)
     set_if_missing("ctf_small_icon", icon)
     set_if_missing("ctf_banner", logo)
+    if staging:
+        for key, value in STAGING.items():
+            set_config(key, value)
     # Rules and How to Play show in the navbar; Privacy is linked from Rules and registration.
     for route, title, hidden in (
         ("how-to-play", "How to Play", False),
@@ -176,4 +189,4 @@ with app.app_context():
     clear_pages()
     # Give (or update) First Paw bonus awards for the current bonus setting.
     sync_first_paw_awards()
-    print("Applied CyberPaw config")
+    print("Applied CyberPaw config" + (" (staging)" if staging else ""))
