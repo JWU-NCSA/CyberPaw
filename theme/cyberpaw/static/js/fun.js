@@ -298,7 +298,7 @@
   };
 
   // Competition status from the start and end times in the admin config: a ticking countdown to the start
-  // or the end, "Open now" when no end is set, or "Competition ended".
+  // or the end, or "Competition ended". Once it has started with no end time set, the card is removed.
   function competitionStatus() {
     const box = document.querySelector("[data-cp-status]");
     if (!box) return;
@@ -318,11 +318,19 @@
     box.replaceChildren(panel);
 
     let timer = null;
+    let counting = false; // counted down to the start on this page view
     const render = () => {
       const now = Date.now() / 1000;
       let target = 0;
+      // The countdown page on /challenges (templates/countdown.html) reloads into the challenges at the start.
+      if (counting && now >= start && box.hasAttribute("data-cp-reload")) {
+        clearInterval(timer);
+        window.location.reload();
+        return;
+      }
       if (start && now < start) {
         panel.dataset.state = "soon";
+        counting = true;
         label.textContent = "Competition starts in";
         target = start;
       } else if (end && now < end) {
@@ -330,13 +338,15 @@
         label.replaceChildren(el("span", "cp-live-dot"), document.createTextNode("Live now · ends in"));
         target = end;
       } else {
-        panel.dataset.state = end ? "over" : "open";
-        label.replaceChildren(
-          el("span", end ? "" : "cp-live-dot"),
-          document.createTextNode(end ? "Competition ended. Thanks for playing! 🐾" : "Live now · hack anytime"),
-        );
-        clock.hidden = true;
         if (timer) clearInterval(timer);
+        // Started with no end time: no card at all.
+        if (!end) {
+          box.remove();
+          return;
+        }
+        panel.dataset.state = "over";
+        label.replaceChildren(document.createTextNode("Competition ended. Thanks for playing! 🐾"));
+        clock.hidden = true;
         return;
       }
       clock.hidden = false;
