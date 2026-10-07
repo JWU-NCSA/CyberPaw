@@ -1,8 +1,8 @@
 #!/bin/bash
-# Deploy a commit of JWU-NCSA/CyberPaw that is on main and passed CI.
+# Deploy the latest commit of a JWU-NCSA/CyberPaw branch, only if CI passed on it.
 #
-#   On the staging VM:    sudo bash scripts/deploy.sh staging           the latest main
-#   On the production VM: sudo bash scripts/deploy.sh promote <commit>  the commit tested on staging
+#   On the staging VM:    sudo bash scripts/deploy.sh staging   the staging branch
+#   On the production VM: sudo bash scripts/deploy.sh prod      the main branch (merged from staging)
 #
 # Run from /opt/cyberpaw/repo. The server only reads from GitHub; GitHub never connects to the server.
 # The deployed commit is written to /opt/cyberpaw/deployed.
@@ -38,20 +38,16 @@ if bad:
 # Everything runs from main(), so bash has read the whole script before git checkout replaces this file.
 main() {
   [ "$(id -u)" = 0 ] || fail "run with sudo"
-  local mode=${1:-} target=${2:-}
-  cd "$REPO_DIR"
-  git fetch -q origin main
-
-  local sha
+  local mode=${1:-} branch
   case "$mode" in
-    staging) sha=$(git rev-parse origin/main) ;;
-    promote)
-      [ -n "$target" ] || fail "usage: deploy.sh promote <commit> (the commit staging printed)"
-      sha=$(git rev-parse --verify -q "$target^{commit}") || fail "unknown commit $target"
-      ;;
-    *) fail "usage: deploy.sh staging | promote <commit>" ;;
+    staging) branch=staging ;;
+    prod) branch=main ;;
+    *) fail "usage: deploy.sh staging | prod" ;;
   esac
-  git merge-base --is-ancestor "$sha" origin/main || fail "$sha is not on main"
+  cd "$REPO_DIR"
+  git fetch -q origin "$branch"
+  local sha
+  sha=$(git rev-parse "origin/$branch")
   ci_passed "$sha" || fail "refusing to deploy $sha"
 
   local previous
@@ -78,8 +74,8 @@ To go back: sudo git -C $REPO_DIR checkout --detach $previous, then run the comp
 
   echo "Deployed $sha ($mode)."
   if [ "$mode" = staging ]; then
-    echo "Check https://staging.jwucyberlab.org, then on the production VM:"
-    echo "  cd $REPO_DIR && sudo bash scripts/deploy.sh promote $sha"
+    echo "Check https://staging.jwucyberlab.org. When it is good, open a pull request from staging into main,"
+    echo "merge it, and on the production VM run: cd $REPO_DIR && sudo bash scripts/deploy.sh prod"
   fi
 }
 
