@@ -1,0 +1,33 @@
+# Checks every push and pull request. scripts/deploy.sh only deploys commits on main where these jobs and the
+# secret scan (secret-scan.yml) passed. Runs on GitHub's runners only; it never connects to the servers.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Python syntax
+        run: python3 -m compileall -q plugins scripts
+      - name: JavaScript syntax
+        run: |
+          for f in theme/cyberpaw/static/js/*.js plugins/cyberpaw/assets/*.js; do node --check "$f"; done
+      - name: Shell syntax
+        run: for f in scripts/*.sh config/*.sh; do bash -n "$f"; done
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Start the site and check the main pages
+        run: bash scripts/smoke-test.sh
+      - name: Stop the site
+        if: always()
+        run: docker compose --project-directory config down -v
