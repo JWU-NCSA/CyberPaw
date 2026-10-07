@@ -259,18 +259,37 @@ The site is ready.
 
 ## Updating the site's code
 
-When the repo on GitHub changes:
+Every change goes through GitHub, then staging, then production. The servers only deploy commits that are
+on `main` in JWU-NCSA/CyberPaw and passed CI (`.github/workflows/ci.yml`: syntax checks and
+`scripts/smoke-test.sh`, which starts the whole site and checks the main pages) and the secret scan.
 
-```
-cd /opt/cyberpaw/repo
-sudo git pull
-sudo cp config/docker-compose.yml /opt/cyberpaw/
-sudo docker compose --project-directory /opt/cyberpaw up -d
-sudo docker compose --project-directory /opt/cyberpaw restart web
-sudo bash scripts/apply-config.sh
-```
+1. Work on a branch and open a pull request to `main`. CI runs on it; merge when it passes and is approved.
+2. On the staging VM (`cyberpaw-staging`, VM 102), deploy the latest `main`:
+   ```
+   cd /opt/cyberpaw/repo && sudo bash scripts/deploy.sh staging
+   ```
+3. Test it at https://staging.jwucyberlab.org (behind a Cloudflare Access login for officers).
+4. On the production VM, deploy the same commit. `deploy.sh staging` prints the exact command:
+   ```
+   cd /opt/cyberpaw/repo && sudo bash scripts/deploy.sh promote <commit>
+   ```
 
+`deploy.sh` checks out the commit, updates `/opt/cyberpaw/docker-compose.yml` if it changed, restarts the
+site, waits for it to come back and runs `apply-config.sh`. The deployed commit is in `/opt/cyberpaw/deployed`.
 Browsers and Cloudflare pick up new styles and scripts automatically.
+
+### The staging VM
+
+Built like production (sections 1-6 and 8) with 2 cores, 2 GB RAM and a 20 GB disk, `WORKERS=1` in `.env`, and
+these differences:
+
+- Fake data only: `sudo bash scripts/seed-demo.sh` (demo users `demo-NN@jwu.edu`). Never copy production's
+  database to it.
+- No mail server, so new sign-ups can't confirm their email. Test with the demo users, or turn off "Verify
+  emails" in Admin -> Config (`deploy.sh` turns it back on through `apply-config.sh`).
+- Its own Cloudflare tunnel (`cyberpaw-staging`, hostname `staging.jwucyberlab.org`), set up like section 10,
+  with a Cloudflare Access application in front of it.
+- The admin password is in `/root/staging-admin.txt` on the VM.
 
 To upgrade CTFd itself, change the image version in `config/docker-compose.yml` on purpose, test it on a
 copy first, and re-check the templates listed in `THIRD_PARTY_NOTICES` against the new version.

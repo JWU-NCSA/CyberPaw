@@ -1,0 +1,16 @@
+{# Shown on /challenges to players while the competition hasn't started (or has ended and challenges are closed),
+   instead of the platform's 403 Forbidden page. The countdown is filled in by js/fun.js, like on the home page. #}
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container">
+    <div class="row">
+      <div class="col-md-8 offset-md-2 text-center cp-home">
+        <h1>Challenges</h1>
+        <p class="lead">{{ message }}</p>
+        <div class="cp-status mt-3" data-cp-status></div>
+        <p class="text-muted mt-3 mb-0">Come back when the clock hits zero. 🐾</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

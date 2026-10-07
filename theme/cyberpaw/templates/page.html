@@ -1,0 +1,27 @@
+{# Derived from the platform's core theme page.html (see THIRD_PARTY_NOTICES). On the home page, logged-in players also get their invite link (js/fun.js moves it under the competition status). Re-check on platform upgrades. #}
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container">
+    {{ content | safe }}
+    {% if request.path == url_for('views.static_html') and Session.id %}
+      {% set ref = cp_referral(Session.id) %}
+      <div class="cp-invite" id="cp-referral" hidden>
+        <div class="cp-invite-title">🐾 Invite friends, earn points</div>
+        <p class="cp-invite-text">
+          <b>+{{ ref.per_referral }}</b> for each friend who signs up with your link and solves a challenge
+          (up to {{ ref.cap }}). They get <b>+{{ ref.new_player_points }}</b> too.
+        </p>
+        <div class="input-group">
+          <input class="form-control" id="cp-referral-link" value="{{ ref.link }}" readonly aria-label="Your invite link">
+          <button type="button" class="btn btn-warning" id="cp-referral-copy"><i class="fas fa-copy"></i> Copy</button>
+        </div>
+        <small class="cp-invite-stats">{{ ref.points }} / {{ ref.cap }} points earned · {{ ref.counted }} friend{{ "" if ref.counted == 1 else "s" }} counted{% if ref.pending %} · {{ ref.pending }} waiting for a first solve{% endif %}</small>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/page.js") }}
+{% endblock %}

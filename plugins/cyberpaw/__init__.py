@@ -14,7 +14,7 @@ toggle, and a one-page challenge upload form. CyberPaw styling and a shorter men
 
 Player profiles (profile.py): generated avatar, short bio, GitHub and LinkedIn links.
 
-Referrals (referral.py): invite link on the Settings page; 50 points per new player who solves a challenge
+Referrals (referral.py): invite link on the home page and the Settings page; 50 points per new player who solves a challenge
 (up to 300), 25 for the new player.
 
 Emails get a CyberPaw HTML version with the logo and buttons instead of long links (email/).
@@ -42,10 +42,10 @@ from .first_paw import first_solvers, install as install_first_paw
 from .profile import install as install_profiles
 from .referral import install as install_referrals
 from .platform_api import (
-    Challenges, UserConfirmTokenInvalidException, Users, admins_only, authed, check_challenge_visibility, check_score_visibility, db,
-    during_ctf_time_only, get_config, get_current_user, is_admin, override_template, platform_email,
+    Challenges, UserConfirmTokenInvalidException, Users, admins_only, authed, check_challenge_visibility, check_score_visibility,
+    ctf_ended, ctf_started, db, during_ctf_time_only, get_config, get_current_user, is_admin, override_template, platform_email,
     register_admin_plugin_script, register_admin_plugin_stylesheet,
-    register_plugin_assets_directory, require_verified_emails, verify_email_confirm_token,
+    register_plugin_assets_directory, require_verified_emails, verify_email_confirm_token, view_after_ctf,
 )
 
 HERE = os.path.dirname(__file__)
@@ -187,6 +187,32 @@ def load(app):
         if request.endpoint == "challenges.listing" and not authed():
             return redirect(url_for("auth.login", next=request.path))
         return None
+
+    @app.before_request
+    def challenges_countdown():
+        """Outside the competition the platform answers /challenges with 403 Forbidden. Show players the
+        countdown instead (or "Competition ended" when challenges close after the end)."""
+        if request.endpoint != "challenges.listing" or not authed() or is_admin():
+            return None
+        if ctf_started() is False:
+            return render_template("countdown.html", message="The competition hasn't started yet.")
+        if ctf_ended() and not view_after_ctf():
+            return render_template("countdown.html", message="The competition is over.")
+        return None
+
+    @app.after_request
+    def login_lands_on_home(response):
+        """After logging in, go to the home page (countdown and invite link) instead of /challenges. A
+        ?next= target, like a guest sent from /challenges, still wins."""
+        if (
+            request.endpoint == "auth.login"
+            and request.method == "POST"
+            and response.status_code == 302
+            and not request.args.get("next")
+            and response.location == url_for("challenges.listing")
+        ):
+            response.location = url_for("views.static_html")
+        return response
 
     @app.before_request
     def printed_qr_code():
