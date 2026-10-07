@@ -28,3 +28,4 @@ from CTFd.utils import email as platform_email  # noqa: F401
 from CTFd.utils.user import authed  # noqa: F401
 from CTFd.utils.security.email import verify_email_confirm_token  # noqa: F401
 from CTFd.exceptions.email import UserConfirmTokenInvalidException  # noqa: F401
+from CTFd.utils.dates import ctf_ended, ctf_started, view_after_ctf  # noqa: F401

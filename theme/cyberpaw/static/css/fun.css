@@ -461,3 +461,34 @@ main:has(.cp-home) {
     font-size: 0.9rem;
   }
 }
+
+/* Invite link on the home page (templates/page.html, moved under the countdown by js/fun.js). */
+.cp-invite {
+  width: min(560px, 100%);
+  margin-top: 1rem;
+  padding: 0.9rem 1.1rem 0.75rem;
+  border-radius: 0.8rem;
+  border: 2px solid var(--cp-gold);
+  background: var(--bs-tertiary-bg);
+  text-align: left;
+}
+.cp-invite-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--cp-blue);
+}
+[data-bs-theme="dark"] .cp-invite-title {
+  color: var(--cp-gold);
+}
+.cp-home .cp-invite-text {
+  margin: 0.2rem 0 0.6rem;
+}
+.cp-invite-stats {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--bs-secondary-color);
+}
+@media (max-height: 800px) {
+  .cp-invite { margin-top: 0.6rem; padding: 0.6rem 0.9rem 0.5rem; }
+  .cp-invite-text { font-size: 0.9rem; }
+}

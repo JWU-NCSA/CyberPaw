@@ -269,10 +269,17 @@
   }
 
   // ---------------------------------------------------------------- home page
-  // Guests see Register / Log in; players see nothing extra (the navbar has their links). Register is hidden
+  // Guests see Register / Log in; players see their invite link (templates/page.html puts it after the page
+  // HTML, so it is moved into the home block here). Register is hidden
   // when the navbar has no Register link (registration closed). The page HTML is sanitized (no "hidden"
   // attribute), so fun.css hides the guest block until it gets the cp-show class.
   function homeActions() {
+    const invite = document.querySelector("#cp-referral[hidden]");
+    const home = document.querySelector(".cp-home");
+    if (invite && home) {
+      home.append(invite);
+      invite.hidden = false;
+    }
     if (loggedIn) return;
     document.querySelectorAll("[data-cp-guest]").forEach((el) => el.classList.add("cp-show"));
     if (!document.querySelector('nav a[href$="/register"]')) {
