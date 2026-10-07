@@ -1,5 +1,5 @@
-# Checks every push and pull request. scripts/deploy.sh only deploys commits on main where these jobs and the
-# secret scan (secret-scan.yml) passed. Runs on GitHub's runners only; it never connects to the servers.
+# Checks every push and pull request. scripts/deploy.sh only deploys the tip of staging (staging VM) or main
+# (production) when these jobs and the secret scan (secret-scan.yml) passed on it. Runs on GitHub's runners only; it never connects to the servers.
 name: CI
 
 on:
@@ -31,3 +31,19 @@ jobs:
       - name: Stop the site
         if: always()
         run: docker compose --project-directory config down -v
+
+  # main only takes changes that were on staging first.
+  from-staging:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull requests into main must come from the staging branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != staging ] || [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "Open this pull request into staging instead. main only takes pull requests from staging."
+            exit 1
+          fi
