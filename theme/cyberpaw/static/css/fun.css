@@ -224,7 +224,6 @@
   font-size: 1.35rem;
   margin-top: 2rem;
   padding-bottom: 0.35rem;
-  border-bottom: 2px solid var(--cp-gold);
 }
 .cp-doc pre {
   background: var(--bs-tertiary-bg);
@@ -295,7 +294,6 @@ main:has(.cp-home) {
   background: linear-gradient(135deg, var(--cp-blue), var(--cp-blue-dark));
   color: #fff;
   box-shadow: 0 6px 22px rgba(13, 75, 137, 0.28);
-  border-bottom: 4px solid var(--cp-gold);
 }
 .cp-countdown[data-state="over"] {
   background: var(--bs-secondary-bg);
@@ -391,7 +389,6 @@ main:has(.cp-home) {
 .cp-avatar-lg {
   width: 112px;
   height: 112px;
-  border-color: var(--cp-gold);
 }
 .cp-bio {
   max-width: 560px;
@@ -433,7 +430,7 @@ main:has(.cp-home) {
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--cp-gold);
+  border: 3px solid #fff;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
 }
 .cp-credit-name {
@@ -468,7 +465,7 @@ main:has(.cp-home) {
   margin-top: 1rem;
   padding: 0.9rem 1.1rem 0.75rem;
   border-radius: 0.8rem;
-  border: 2px solid var(--cp-gold);
+  border: 2px solid var(--bs-border-color);
   background: var(--bs-tertiary-bg);
   text-align: left;
 }
