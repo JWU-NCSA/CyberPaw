@@ -224,7 +224,6 @@
   font-size: 1.35rem;
   margin-top: 2rem;
   padding-bottom: 0.35rem;
-  border-bottom: 2px solid var(--cp-gold);
 }
 .cp-doc pre {
   background: var(--bs-tertiary-bg);
@@ -295,7 +294,6 @@ main:has(.cp-home) {
   background: linear-gradient(135deg, var(--cp-blue), var(--cp-blue-dark));
   color: #fff;
   box-shadow: 0 6px 22px rgba(13, 75, 137, 0.28);
-  border-bottom: 4px solid var(--cp-gold);
 }
 .cp-countdown[data-state="over"] {
   background: var(--bs-secondary-bg);
