@@ -517,9 +517,38 @@
     });
   }
 
+  // ---------------------------------------------------------------- Instagram share button
+  // Instagram has no web share link. Phones get the system share sheet (which lists Instagram); elsewhere the
+  // caption is copied and Instagram opens in a new tab. The button is inside the flag result, which the
+  // challenge window creates later, so listen on the document.
+  function instagramShare() {
+    document.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-cp-instagram]");
+      if (!button) return;
+      const caption = button.dataset.cpInstagram;
+      if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+        try {
+          await navigator.share({ text: caption });
+          return;
+        } catch (e) {
+          if (e.name === "AbortError") return;
+        }
+      }
+      // Copy before opening the tab: the clipboard only works while this page has focus.
+      try {
+        await navigator.clipboard.writeText(caption);
+        toast("Caption copied. Paste it into your Instagram post or story.");
+      } catch (e) {
+        toast(caption);
+      }
+      window.open("https://www.instagram.com/", "_blank", "noopener");
+    });
+  }
+
   const start = () => {
     profileSettings();
     referralCopy();
+    instagramShare();
     oneTabConfirm();
     showMotd();
     homeActions();
