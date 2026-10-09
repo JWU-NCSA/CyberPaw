@@ -1,4 +1,4 @@
-{# Derived from the platform's core theme challenge.html (see THIRD_PARTY_NOTICES). Adds the flag-result event and the First Paw badge; social share buttons removed; hints open through cpHint (js/fun.js), free hints without a cost label. #}
+{# Derived from the platform's core theme challenge.html (see THIRD_PARTY_NOTICES). Adds the flag-result event and the First Paw badge; share buttons post the solve with the player's invite link; hints open through cpHint (js/fun.js), free hints without a cost label. #}
 <div :class="getStyles()" role="document" x-data="Challenge" x-init='id = {{ challenge.id }}; max_attempts = {{ max_attempts }}; attempts = {{ attempts }}; ratingValue = {{ (rating.get('value') if rating else None) | tojson }}; ratingReview = {{ (rating.get('review', '') if rating else None) | tojson }};'>
   <div class="modal-content">
     <div class="modal-body py-4 px-4 px-sm-5">
@@ -214,6 +214,27 @@
                           {% trans %}Next Challenge{% endtrans %}
                         </button>
                       </div>
+
+                      {% if Configs.social_shares and Session.id %}
+                      {# Share the solve with the player's invite link (plugins/cyberpaw/referral.py). LinkedIn and X take
+                         the text in the URL; Instagram has no share link, so js/fun.js copies the caption instead. #}
+                      {% set cp_invite = url_for("auth.register", ref=Session.id, _external=True) %}
+                      {% set cp_share_text = 'I solved "' ~ challenge.name ~ '" in the ' ~ Configs.ctf_name ~ '! Join me:' %}
+                      <div class="cp-share mt-3">
+                        <small class="text-muted d-block mb-1">Share your solve</small>
+                        <div class="btn-group" role="group">
+                          <a href="https://www.linkedin.com/feed/?shareActive=true&text={{ (cp_share_text ~ ' ' ~ cp_invite) | urlencode }}" role="button" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" aria-label="Share on LinkedIn">
+                            <i class="fa-brands fa-linkedin-in"></i>
+                          </a>
+                          <a href="https://x.com/intent/post?text={{ cp_share_text | urlencode }}&url={{ cp_invite | urlencode }}" role="button" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" aria-label="Share on X">
+                            <i class="fa-brands fa-x-twitter"></i>
+                          </a>
+                          <button type="button" class="btn btn-sm btn-outline-secondary" data-cp-instagram="{{ cp_share_text }} {{ cp_invite }}" aria-label="Share on Instagram">
+                            <i class="fa-brands fa-instagram"></i>
+                          </button>
+                        </div>
+                      </div>
+                      {% endif %}
 
                       {% if Configs.challenge_ratings != "disabled" %}
                       <div class="mt-3">
