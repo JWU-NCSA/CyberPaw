@@ -490,7 +490,8 @@ main:has(.cp-home) {
   .cp-invite-text { font-size: 0.9rem; }
 }
 
-/* Solve panel in the challenge window (templates/challenge.html): share card, share buttons and rating. */
+/* Solve panel in the challenge window (templates/challenge.html): share card, share buttons and rating.
+   The final standing on the home page (templates/page.html) uses the same panel. */
 .cp-solved {
   max-width: 26rem;
   margin-left: auto;
@@ -516,7 +517,7 @@ main:has(.cp-home) {
   text-transform: uppercase;
   color: var(--bs-secondary-color);
 }
-.cp-solve-card {
+.cp-share-card {
   display: block;
   width: 100%;
   max-width: 20rem;
@@ -525,7 +526,7 @@ main:has(.cp-home) {
   box-shadow: 0 8px 26px rgba(13, 75, 137, 0.3);
   animation: cp-card-in 0.5s ease-out;
 }
-.cp-solve-card[hidden] {
+.cp-share-card[hidden] {
   display: none;
 }
 @keyframes cp-card-in {
@@ -552,6 +553,7 @@ main:has(.cp-home) {
   font-weight: 600;
   font-size: 0.95rem;
   line-height: 1.1;
+  white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
@@ -618,6 +620,11 @@ main:has(.cp-home) {
   .cp-share-btn span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cp-solve-card { animation: none; }
+  .cp-share-card { animation: none; }
   .cp-share-btn:hover, .cp-share-btn:focus-visible, .cp-rate-btn:hover { transform: none; }
+}
+.cp-final {
+  max-width: 30rem;
+  margin-top: 1rem;
+  text-align: center;
 }
