@@ -1,0 +1,17 @@
+{# Share buttons for a card (solve card in challenge.html, final standing in page.html). Needs share_text and
+   invite (the player's invite link). LinkedIn and X take the text in the URL; Instagram has no share link, so
+   js/fun.js shares or downloads the card image and copies the caption instead. #}
+<div class="cp-share-buttons">
+  <a href="https://www.linkedin.com/feed/?shareActive=true&text={{ (share_text ~ ' ' ~ invite) | urlencode }}" role="button" class="cp-share-btn cp-share-linkedin" target="_blank" rel="noopener">
+    <i class="fa-brands fa-linkedin-in"></i><span>LinkedIn</span>
+  </a>
+  <a href="https://x.com/intent/post?text={{ share_text | urlencode }}&url={{ invite | urlencode }}" role="button" class="cp-share-btn cp-share-x" target="_blank" rel="noopener">
+    <i class="fa-brands fa-x-twitter"></i><span>Post on X</span>
+  </a>
+  <button type="button" class="cp-share-btn cp-share-instagram" data-cp-instagram="{{ share_text }} {{ invite }}">
+    <i class="fa-brands fa-instagram"></i><span>Instagram</span>
+  </button>
+</div>
+<button type="button" class="btn btn-link btn-sm cp-card-download" data-cp-card-download>
+  <i class="fa-solid fa-download"></i> Download image
+</button>

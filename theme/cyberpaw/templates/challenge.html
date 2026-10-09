@@ -221,32 +221,19 @@
                       {% if cp_sharing or cp_rating %}
                       <div class="cp-solved mt-3">
                         {% if cp_sharing %}
-                        {# Share the solve with the player's invite link (plugins/cyberpaw/referral.py). LinkedIn and X take
-                           the text in the URL. js/fun.js draws the card image from the data-* attributes; Instagram has no
-                           share link, so the Instagram button shares or downloads the image and copies the caption. #}
-                        {% set cp_invite = url_for("auth.register", ref=Session.id, _external=True) %}
-                        {% set cp_share_text = 'I solved "' ~ challenge.name ~ '" in the ' ~ Configs.ctf_name ~ '! Join me:' %}
-                        <section class="cp-solved-section" data-cp-solve
+                        {# Share the solve with the player's invite link (plugins/cyberpaw/referral.py). js/fun.js draws
+                           the card image from the data-* attributes. #}
+                        <section class="cp-solved-section" data-cp-card="solve"
                             data-challenge="{{ challenge.name }}" data-category="{{ challenge.category }}"
                             data-points="{{ challenge.value }}" data-player="{{ User.name }}"
                             data-ctf="{{ Configs.ctf_name }}" data-site="{{ request.host }}"
                             data-logo="{{ url_for('views.files', path=Configs.ctf_banner) if Configs.ctf_banner else '' }}">
-                          <img class="cp-solve-card" alt="Challenge solved: {{ challenge.name }}" hidden>
+                          <img class="cp-share-card" alt="Challenge solved: {{ challenge.name }}" hidden>
                           <div class="cp-solved-label">Share your solve</div>
-                          <div class="cp-share-buttons">
-                            <a href="https://www.linkedin.com/feed/?shareActive=true&text={{ (cp_share_text ~ ' ' ~ cp_invite) | urlencode }}" role="button" class="cp-share-btn cp-share-linkedin" target="_blank" rel="noopener">
-                              <i class="fa-brands fa-linkedin-in"></i><span>LinkedIn</span>
-                            </a>
-                            <a href="https://x.com/intent/post?text={{ cp_share_text | urlencode }}&url={{ cp_invite | urlencode }}" role="button" class="cp-share-btn cp-share-x" target="_blank" rel="noopener">
-                              <i class="fa-brands fa-x-twitter"></i><span>Post on X</span>
-                            </a>
-                            <button type="button" class="cp-share-btn cp-share-instagram" data-cp-instagram="{{ cp_share_text }} {{ cp_invite }}">
-                              <i class="fa-brands fa-instagram"></i><span>Instagram</span>
-                            </button>
-                          </div>
-                          <button type="button" class="btn btn-link btn-sm cp-card-download" data-cp-card-download>
-                            <i class="fa-solid fa-download"></i> Download image
-                          </button>
+                          {% with share_text = 'I solved "' ~ challenge.name ~ '" in the ' ~ Configs.ctf_name ~ '! Join me:',
+                                  invite = url_for("auth.register", ref=Session.id, _external=True) %}
+                            {% include "components/cp_share_buttons.html" %}
+                          {% endwith %}
                         </section>
                         {% endif %}
 
