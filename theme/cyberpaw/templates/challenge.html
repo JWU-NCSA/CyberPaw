@@ -1,4 +1,4 @@
-{# Derived from the platform's core theme challenge.html (see THIRD_PARTY_NOTICES). Adds the flag-result event and the First Paw badge; share buttons post the solve with the player's invite link; hints open through cpHint (js/fun.js), free hints without a cost label. #}
+{# Derived from the platform's core theme challenge.html (see THIRD_PARTY_NOTICES). Adds the flag-result event and the First Paw badge; solve panel with a share card, share buttons (with the player's invite link) and the rating, restyled as one panel; hints open through cpHint (js/fun.js), free hints without a cost label. #}
 <div :class="getStyles()" role="document" x-data="Challenge" x-init='id = {{ challenge.id }}; max_attempts = {{ max_attempts }}; attempts = {{ attempts }}; ratingValue = {{ (rating.get('value') if rating else None) | tojson }}; ratingReview = {{ (rating.get('review', '') if rating else None) | tojson }};'>
   <div class="modal-content">
     <div class="modal-body py-4 px-4 px-sm-5">
@@ -215,70 +215,73 @@
                         </button>
                       </div>
 
-                      {% if Configs.social_shares and Session.id %}
-                      {# Share the solve with the player's invite link (plugins/cyberpaw/referral.py). LinkedIn and X take
-                         the text in the URL; Instagram has no share link, so js/fun.js copies the caption instead. #}
-                      {% set cp_invite = url_for("auth.register", ref=Session.id, _external=True) %}
-                      {% set cp_share_text = 'I solved "' ~ challenge.name ~ '" in the ' ~ Configs.ctf_name ~ '! Join me:' %}
-                      <div class="cp-share mt-3">
-                        <small class="text-muted d-block mb-1">Share your solve</small>
-                        <div class="btn-group" role="group">
-                          <a href="https://www.linkedin.com/feed/?shareActive=true&text={{ (cp_share_text ~ ' ' ~ cp_invite) | urlencode }}" role="button" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" aria-label="Share on LinkedIn">
-                            <i class="fa-brands fa-linkedin-in"></i>
-                          </a>
-                          <a href="https://x.com/intent/post?text={{ cp_share_text | urlencode }}&url={{ cp_invite | urlencode }}" role="button" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" aria-label="Share on X">
-                            <i class="fa-brands fa-x-twitter"></i>
-                          </a>
-                          <button type="button" class="btn btn-sm btn-outline-secondary" data-cp-instagram="{{ cp_share_text }} {{ cp_invite }}" aria-label="Share on Instagram">
-                            <i class="fa-brands fa-instagram"></i>
+                      {# Solve panel: share card and buttons, then the rating, styled as one panel (css/fun.css). #}
+                      {% set cp_sharing = Configs.social_shares and Session.id %}
+                      {% set cp_rating = Configs.challenge_ratings != "disabled" %}
+                      {% if cp_sharing or cp_rating %}
+                      <div class="cp-solved mt-3">
+                        {% if cp_sharing %}
+                        {# Share the solve with the player's invite link (plugins/cyberpaw/referral.py). LinkedIn and X take
+                           the text in the URL. js/fun.js draws the card image from the data-* attributes; Instagram has no
+                           share link, so the Instagram button shares or downloads the image and copies the caption. #}
+                        {% set cp_invite = url_for("auth.register", ref=Session.id, _external=True) %}
+                        {% set cp_share_text = 'I solved "' ~ challenge.name ~ '" in the ' ~ Configs.ctf_name ~ '! Join me:' %}
+                        <section class="cp-solved-section" data-cp-solve
+                            data-challenge="{{ challenge.name }}" data-category="{{ challenge.category }}"
+                            data-points="{{ challenge.value }}" data-player="{{ User.name }}"
+                            data-ctf="{{ Configs.ctf_name }}" data-site="{{ request.host }}"
+                            data-logo="{{ url_for('views.files', path=Configs.ctf_banner) if Configs.ctf_banner else '' }}">
+                          <img class="cp-solve-card" alt="Challenge solved: {{ challenge.name }}" hidden>
+                          <div class="cp-solved-label">Share your solve</div>
+                          <div class="cp-share-buttons">
+                            <a href="https://www.linkedin.com/feed/?shareActive=true&text={{ (cp_share_text ~ ' ' ~ cp_invite) | urlencode }}" role="button" class="cp-share-btn cp-share-linkedin" target="_blank" rel="noopener">
+                              <i class="fa-brands fa-linkedin-in"></i><span>LinkedIn</span>
+                            </a>
+                            <a href="https://x.com/intent/post?text={{ cp_share_text | urlencode }}&url={{ cp_invite | urlencode }}" role="button" class="cp-share-btn cp-share-x" target="_blank" rel="noopener">
+                              <i class="fa-brands fa-x-twitter"></i><span>Post on X</span>
+                            </a>
+                            <button type="button" class="cp-share-btn cp-share-instagram" data-cp-instagram="{{ cp_share_text }} {{ cp_invite }}">
+                              <i class="fa-brands fa-instagram"></i><span>Instagram</span>
+                            </button>
+                          </div>
+                          <button type="button" class="btn btn-link btn-sm cp-card-download" data-cp-card-download>
+                            <i class="fa-solid fa-download"></i> Download image
                           </button>
-                        </div>
-                      </div>
-                      {% endif %}
+                        </section>
+                        {% endif %}
 
-                      {% if Configs.challenge_ratings != "disabled" %}
-                      <div class="mt-3">
-                        <hr>
-                        <div class="text-center">
-                          <p class="mb-2">{% trans %}Rate this challenge:{% endtrans %}</p>
-                          <div class="rating-buttons mb-2" x-init="selectedRating = ratingValue || 0;">
-                            <button 
-                              class="btn btn-outline-success me-2" 
-                              :class="{ 'active': selectedRating === 1 }"
+                        {% if cp_rating %}
+                        <section class="cp-solved-section">
+                          <div class="cp-solved-label">{% trans %}Rate this challenge{% endtrans %}</div>
+                          <div class="cp-rate-buttons" x-init="selectedRating = ratingValue || 0;">
+                            <button type="button" class="cp-rate-btn cp-rate-up"
+                              :class="{ 'active': selectedRating === 1 }" :aria-pressed="selectedRating === 1"
                               @click="selectedRating = 1"
                             >
-                              <i class="fa-solid fa-thumbs-up"></i>
+                              <i class="fa-solid fa-thumbs-up"></i><span>{% trans %}Liked it{% endtrans %}</span>
                             </button>
-                            <button 
-                              class="btn btn-outline-danger" 
-                              :class="{ 'active': selectedRating === -1 }"
+                            <button type="button" class="cp-rate-btn cp-rate-down"
+                              :class="{ 'active': selectedRating === -1 }" :aria-pressed="selectedRating === -1"
                               @click="selectedRating = -1"
                             >
-                              <i class="fa-solid fa-thumbs-down"></i>
+                              <i class="fa-solid fa-thumbs-down"></i><span>{% trans %}Not for me{% endtrans %}</span>
                             </button>
                           </div>
-                          <div class="mt-3">
-                            <textarea 
-                              class="form-control" 
-                              rows="2" 
-                              x-model="ratingReview"
-                              placeholder="{% trans %}Write a review (optional){% endtrans %}"
-                              maxlength="2000"
-                            ></textarea>
+                          <textarea
+                            class="form-control cp-rate-review"
+                            rows="2"
+                            x-model="ratingReview"
+                            placeholder="{% trans %}Write a review (optional){% endtrans %}"
+                            maxlength="2000"
+                          ></textarea>
+                          <button @click="submitRating()" class="btn btn-primary cp-rate-submit" :disabled="!selectedRating">
+                            {% trans %}Submit rating{% endtrans %}
+                          </button>
+                          <div x-show="ratingSubmitted" class="text-success small mt-2">
+                            {% trans %}Thank you for your rating!{% endtrans %}
                           </div>
-                          <div class="mt-3">
-                            <button 
-                              @click="submitRating()"
-                              class="btn btn-primary"
-                              :disabled="!selectedRating"
-                            >
-                              {% trans %}Submit{% endtrans %}
-                            </button>
-                          </div>
-                          <div x-show="ratingSubmitted" class="text-success mt-2">
-                            <small>{% trans %}Thank you for your rating!{% endtrans %}</small>
-                          </div>
-                        </div>
+                        </section>
+                        {% endif %}
                       </div>
                       {% endif %}
                     </div>

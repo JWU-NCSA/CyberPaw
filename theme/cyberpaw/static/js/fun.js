@@ -517,18 +517,248 @@
     });
   }
 
-  // ---------------------------------------------------------------- Instagram share button
-  // Instagram has no web share link. Phones get the system share sheet (which lists Instagram); elsewhere the
-  // caption is copied and Instagram opens in a new tab. The button is inside the flag result, which the
-  // challenge window creates later, so listen on the document.
-  function instagramShare() {
+  // ---------------------------------------------------------------- solve card and share buttons
+  // After a solve, the challenge window shows a square "challenge solved" image to share, like the
+  // certificates on Hack The Box. It is drawn on a canvas from the data-* attributes of [data-cp-solve]
+  // (templates/challenge.html), shown in the panel and used by the Download and Instagram buttons. The
+  // panel is created later by the challenge window, so everything here listens on the document.
+  const CARD_SIZE = 1080;
+  const cards = new WeakMap(); // [data-cp-solve] element -> Promise of the PNG blob
+
+  function loadImage(src) {
+    return new Promise((resolve) => {
+      if (!src) return resolve(null);
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  // The largest font size (down to `min`) at which `text` fits in `maxLines` lines. If it still doesn't fit,
+  // lines that are too wide and the last line (when text is left over) end in an ellipsis.
+  function fitLines(ctx, text, font, maxWidth, maxLines, max, min) {
+    let size = max;
+    let lines = [];
+    for (; size >= min; size -= 4) {
+      ctx.font = font(size);
+      lines = [];
+      let line = "";
+      for (const word of text.split(/\s+/)) {
+        const next = line ? line + " " + word : word;
+        if (line && ctx.measureText(next).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = next;
+        }
+      }
+      lines.push(line);
+      if (lines.length <= maxLines && lines.every((l) => ctx.measureText(l).width <= maxWidth)) return { size, lines };
+    }
+    size = min;
+    ctx.font = font(size);
+    const more = lines.length > maxLines;
+    lines = lines.slice(0, maxLines).map((line, i) => {
+      if (!(more && i === maxLines - 1) && ctx.measureText(line).width <= maxWidth) return line;
+      while (line && ctx.measureText(line + "…").width > maxWidth) line = line.slice(0, -1);
+      return line + "…";
+    });
+    return { size, lines };
+  }
+
+  function paw(ctx, x, y, scale, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.scale(scale, scale);
+    ctx.beginPath();
+    ctx.ellipse(0, 18, 30, 25, 0, 0, Math.PI * 2);
+    [[-34, -14, -0.4], [-13, -34, -0.15], [13, -34, 0.15], [34, -14, 0.4]].forEach(([tx, ty, r]) => {
+      ctx.moveTo(tx + 11, ty);
+      ctx.ellipse(tx, ty, 11, 15, r, 0, Math.PI * 2);
+    });
+    ctx.fill();
+    ctx.restore();
+  }
+
+  async function drawSolveCard(data) {
+    const S = CARD_SIZE;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = S;
+    const ctx = canvas.getContext("2d");
+    const css = getComputedStyle(document.documentElement);
+    const blue = css.getPropertyValue("--cp-blue").trim() || "#2664A2";
+    const dark = css.getPropertyValue("--cp-blue-dark").trim() || "#0D4B89";
+    const family = getComputedStyle(document.body).fontFamily || "sans-serif";
+    const font = (weight) => (size) => `${weight} ${size}px ${family}`;
+    const logo = await loadImage(data.logo);
+
+    // Blue background with faint binary and paw prints, white header with the logo.
+    const bg = ctx.createLinearGradient(0, 0, S, S);
+    bg.addColorStop(0, blue);
+    bg.addColorStop(1, dark);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.035)";
+    ctx.font = `600 22px ui-monospace, monospace`;
+    for (let row = 0, y = 330; y < S; row++, y += 34) {
+      let bits = "";
+      for (let i = 0; i < 80; i++) bits += (i * 7 + row * 13 + ((i * row) % 5)) % 3 ? "1" : "0";
+      ctx.fillText(bits, -((row * 17) % 40), y);
+    }
+    ctx.fillStyle = "rgba(255, 255, 255, 0.07)";
+    paw(ctx, 140, 980, 1.6, -0.5);
+    paw(ctx, 950, 430, 1.3, 0.45);
+    paw(ctx, 980, 900, 0.9, 0.2);
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, S, 280);
+    if (logo) {
+      const h = 200;
+      const w = (logo.width / logo.height) * h;
+      ctx.drawImage(logo, (S - w) / 2, 40, w, h);
+    } else {
+      ctx.fillStyle = blue;
+      ctx.textAlign = "center";
+      ctx.font = font(800)(90);
+      ctx.fillText(data.ctf, S / 2, 175);
+    }
+
+    // Check mark badge and "challenge solved".
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(S / 2, 370, 46, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = blue;
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(S / 2 - 22, 372);
+    ctx.lineTo(S / 2 - 6, 388);
+    ctx.lineTo(S / 2 + 24, 354);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.font = font(700)(34);
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "8px";
+    ctx.fillText("CHALLENGE SOLVED", S / 2 + 4, 470);
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+
+    // Challenge name, category and points, and the player, stacked and centered between the heading
+    // and the footer.
+    const pill = [data.category, data.points ? `${data.points} pts` : ""].filter(Boolean).join("  ·  ");
+    const who = data.player && fitLines(ctx, data.player, font(700), 860, 1, 48, 30);
+    const rest = (pill ? 40 + 60 : 0) + (who ? 56 + 34 + 10 + who.size : 0);
+    // Shrink the title until the whole stack fits.
+    let title;
+    for (let max = 96; ; max -= 4) {
+      title = fitLines(ctx, data.challenge, font(800), 900, 3, max, 44);
+      if (max <= 44 || title.lines.length * Math.round(title.size * 1.15) + rest <= 980 - 510) break;
+    }
+    const lineHeight = Math.round(title.size * 1.15);
+    const height = title.lines.length * lineHeight + rest;
+    let y = 510 + Math.max(0, (980 - 510 - height) / 2);
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#fff";
+    ctx.font = font(800)(title.size);
+    title.lines.forEach((line) => {
+      ctx.fillText(line, S / 2, y + (lineHeight - title.size) / 2);
+      y += lineHeight;
+    });
+    if (pill) {
+      y += 40;
+      ctx.font = font(600)(32);
+      const w = ctx.measureText(pill).width + 64;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect((S - w) / 2, y, w, 60, 30);
+      else ctx.rect((S - w) / 2, y, w, 60);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.fillText(pill, S / 2, y + 13);
+      y += 60;
+    }
+    if (who) {
+      y += 56;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.font = font(500)(34);
+      ctx.fillText("Solved by", S / 2, y);
+      y += 34 + 10;
+      ctx.fillStyle = "#fff";
+      ctx.font = font(700)(who.size);
+      ctx.fillText(who.lines[0], S / 2, y);
+    }
+    ctx.textBaseline = "alphabetic";
+
+    // Footer.
+    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+    ctx.font = font(500)(26);
+    const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    ctx.fillText([data.ctf, data.site, date].filter(Boolean).join("  ·  "), S / 2, 1035);
+
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  }
+
+  function solveCard(section) {
+    if (!cards.has(section)) cards.set(section, drawSolveCard({ ...section.dataset }));
+    return cards.get(section);
+  }
+
+  function cardFileName(section) {
+    const slug = (section.dataset.challenge || "challenge").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return `cyberpaw-${slug || "challenge"}.png`;
+  }
+
+  function downloadCard(blob, name) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+
+  function solvePanel() {
+    window.addEventListener("cp-flag-result", async (event) => {
+      const status = event.detail && event.detail.status;
+      if (status !== "correct" && status !== "already_solved") return;
+      const section = event.target instanceof Element && event.target.querySelector("[data-cp-solve]");
+      if (!section) return;
+      const img = section.querySelector(".cp-solve-card");
+      if (!img || !img.hidden) return;
+      const blob = await solveCard(section);
+      if (!blob) return;
+      img.src = URL.createObjectURL(blob);
+      img.hidden = false;
+    });
+
     document.addEventListener("click", async (event) => {
-      const button = event.target.closest("[data-cp-instagram]");
-      if (!button) return;
-      const caption = button.dataset.cpInstagram;
-      if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+      const download = event.target.closest("[data-cp-card-download]");
+      const instagram = event.target.closest("[data-cp-instagram]");
+      if (!download && !instagram) return;
+      const section = event.target.closest("[data-cp-solve]");
+      if (!section) return;
+      const blob = await solveCard(section);
+      const name = cardFileName(section);
+      if (download) {
+        if (blob) downloadCard(blob, name);
+        return;
+      }
+
+      // Instagram has no web share link. Phones get the system share sheet with the image and caption
+      // (Instagram is listed there); elsewhere the image is downloaded, the caption copied and Instagram
+      // opened in a new tab.
+      const caption = instagram.dataset.cpInstagram;
+      const file = blob && new File([blob], name, { type: "image/png" });
+      if (matchMedia("(pointer: coarse)").matches && navigator.share) {
+        const shareData = file && navigator.canShare && navigator.canShare({ files: [file] })
+          ? { files: [file], text: caption }
+          : { text: caption };
         try {
-          await navigator.share({ text: caption });
+          await navigator.share(shareData);
           return;
         } catch (e) {
           if (e.name === "AbortError") return;
@@ -537,10 +767,11 @@
       // Copy before opening the tab: the clipboard only works while this page has focus.
       try {
         await navigator.clipboard.writeText(caption);
-        toast("Caption copied. Paste it into your Instagram post or story.");
+        toast(blob ? "Image saved and caption copied. Post them on Instagram." : "Caption copied. Paste it into your Instagram post.");
       } catch (e) {
         toast(caption);
       }
+      if (blob) downloadCard(blob, name);
       window.open("https://www.instagram.com/", "_blank", "noopener");
     });
   }
@@ -548,7 +779,7 @@
   const start = () => {
     profileSettings();
     referralCopy();
-    instagramShare();
+    solvePanel();
     oneTabConfirm();
     showMotd();
     homeActions();
