@@ -92,6 +92,17 @@ def home():
     return render("home.html", **page_context())
 
 
+@admin_pages.route("/admin/cyberpaw/referrals")
+@admins_only
+def referrals():
+    """Referral data for the admin Users page columns (assets/admin.js). Empty when the setting is off."""
+    from .referral import ADMIN_COLUMNS_SETTING, admin_overview
+
+    if not get_config(ADMIN_COLUMNS_SETTING):
+        return jsonify(enabled=False)
+    return jsonify(enabled=True, **admin_overview()), 200, {"Cache-Control": "no-store"}
+
+
 # System graph: a map of every server, service and file behind the site. It names internal details, so it
 # is never committed (the repo is public). An admin copies it to this path on the server; see .gitignore.
 SYSTEM_GRAPH = os.path.join(os.path.dirname(__file__), "system-graph.html")
