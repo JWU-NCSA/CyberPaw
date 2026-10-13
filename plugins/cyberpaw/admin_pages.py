@@ -11,7 +11,7 @@ from flask import Blueprint, abort, jsonify, redirect, render_template_string, r
 from sqlalchemy import func
 
 from .platform_api import (
-    ChallengeFiles, Challenges, DynamicChallenge, Fails, Flags, Solves, Users,
+    ChallengeFiles, Challenges, DynamicChallenge, Fails, Flags, Ratings, Solves, Users,
     admins_only, clear_challenges, clear_config, clear_standings, db, delete_file, get_config,
     is_admin, set_config, upload_file,
 )
@@ -57,6 +57,23 @@ def page_context():
         db.session.query(Solves.challenge_id, func.count(Solves.id)).group_by(Solves.challenge_id)
     )
     difficulty = dict(db.session.query(Meta.challenge_id, Meta.difficulty))
+    # Player ratings: thumbs up/down counts and the optional written reviews, newest first. Admins only.
+    ratings = {}
+    rows = (
+        db.session.query(Ratings, Users.id, Users.name)
+        .join(Users, Users.id == Ratings.user_id)
+        .order_by(Ratings.date.desc())
+    )
+    for rating, user_id, user_name in rows:
+        r = ratings.setdefault(rating.challenge_id, {"up": 0, "down": 0, "reviews": []})
+        if rating.value == 1:
+            r["up"] += 1
+        elif rating.value == -1:
+            r["down"] += 1
+        if rating.review and rating.review.strip():
+            r["reviews"].append(
+                {"user_id": user_id, "user": user_name, "value": rating.value, "text": rating.review, "date": rating.date}
+            )
     categories = {}
     for chal in Challenges.query.order_by(Challenges.category, Challenges.value).all():
         categories.setdefault(chal.category or "Uncategorized", []).append(
@@ -68,6 +85,7 @@ def page_context():
                 "visible": chal.state == "visible",
                 "difficulty": difficulty.get(chal.id, 0),
                 "solves": solves.get(chal.id, 0),
+                "ratings": ratings.get(chal.id, {"up": 0, "down": 0, "reviews": []}),
             }
         )
 

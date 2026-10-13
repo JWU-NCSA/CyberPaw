@@ -5,7 +5,7 @@ file. When the platform is upgraded, check these names first.
 """
 from CTFd.cache import clear_challenges, clear_config, clear_standings  # noqa: F401
 from CTFd.models import (  # noqa: F401
-    Awards, ChallengeFiles, Challenges, Fails, Flags, Solves, Users, db,
+    Awards, ChallengeFiles, Challenges, Fails, Flags, Ratings, Solves, Users, db,
 )
 from CTFd.plugins import (  # noqa: F401
     override_template,
