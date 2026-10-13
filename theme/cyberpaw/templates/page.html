@@ -1,10 +1,28 @@
-{# Derived from the platform's core theme page.html (see THIRD_PARTY_NOTICES). On the home page, logged-in players also get their invite link (js/fun.js moves it under the competition status). Re-check on platform upgrades. #}
+{# Derived from the platform's core theme page.html (see THIRD_PARTY_NOTICES). On the home page, logged-in players also get their invite link and, after the competition, their final standing card (js/fun.js moves them under the competition status). Re-check on platform upgrades. #}
 {% extends "base.html" %}
 
 {% block content %}
   <div class="container">
     {{ content | safe }}
     {% if request.path == url_for('views.static_html') and Session.id %}
+      {% set standing = cp_final_standing(Session.id) if Configs.social_shares else None %}
+      {% if standing %}
+        {# After the competition: the player's place as a card to share (plugins/cyberpaw/standing.py). js/fun.js
+           moves it under the competition status and draws the image from the data-* attributes. #}
+        {% set place_text = "won" if standing.place == 1 else "placed " ~ standing.ordinal ~ " of " ~ standing.players ~ " players in" %}
+        <div class="cp-solved cp-final" id="cp-final" hidden data-cp-card="standing"
+            data-place="{{ standing.place }}" data-ordinal="{{ standing.ordinal }}" data-players="{{ standing.players }}"
+            data-score="{{ standing.score }}" data-solves="{{ standing.solves }}" data-end="{{ standing.end }}"
+            data-player="{{ User.name }}" data-ctf="{{ Configs.ctf_name }}" data-site="{{ request.host }}"
+            data-logo="{{ url_for('views.files', path=Configs.ctf_banner) if Configs.ctf_banner else '' }}">
+          <div class="cp-solved-label">Your final standing</div>
+          <img class="cp-share-card" alt="Final standing: {{ standing.ordinal }} of {{ standing.players }}" hidden>
+          {% with share_text = "I " ~ place_text ~ " the " ~ Configs.ctf_name ~ " with " ~ "{:,}".format(standing.score) ~ " points! Join me next time:",
+                  invite = url_for("auth.register", ref=Session.id, _external=True) %}
+            {% include "components/cp_share_buttons.html" %}
+          {% endwith %}
+        </div>
+      {% endif %}
       {% set ref = cp_referral(Session.id) %}
       <div class="cp-invite" id="cp-referral" hidden>
         <div class="cp-invite-title">🐾 Invite friends, earn points</div>

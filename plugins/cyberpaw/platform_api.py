@@ -29,3 +29,6 @@ from CTFd.utils.user import authed  # noqa: F401
 from CTFd.utils.security.email import verify_email_confirm_token  # noqa: F401
 from CTFd.exceptions.email import UserConfirmTokenInvalidException  # noqa: F401
 from CTFd.utils.dates import ctf_ended, ctf_started, view_after_ctf  # noqa: F401
+from CTFd.utils.config.visibility import scores_visible  # noqa: F401
+from CTFd.utils.humanize.numbers import ordinalize  # noqa: F401
+from CTFd.utils.scores import get_user_standings  # noqa: F401

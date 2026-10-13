@@ -17,6 +17,9 @@ Player profiles (profile.py): generated avatar, short bio, GitHub and LinkedIn l
 Referrals (referral.py): invite link on the home page and the Settings page; 50 points per new player who solves a challenge
 (up to 300), 25 for the new player.
 
+Final standing (standing.py): after the competition ends, the home page shows each player's place as a
+shareable card.
+
 Emails get a CyberPaw HTML version with the logo and buttons instead of long links (email/).
 
 Email confirmation: signing up sends one email (the confirm link; the platform's extra "registered"
@@ -41,6 +44,7 @@ from sqlalchemy import event
 from .first_paw import first_solvers, install as install_first_paw
 from .profile import install as install_profiles
 from .referral import install as install_referrals
+from .standing import install as install_standing
 from .platform_api import (
     Challenges, UserConfirmTokenInvalidException, Users, admins_only, authed, check_challenge_visibility, check_score_visibility,
     ctf_ended, ctf_started, db, during_ctf_time_only, get_config, get_current_user, is_admin, override_template, platform_email,
@@ -121,6 +125,7 @@ def load(app):
     install_profiles(app)
     install_first_paw(app)
     install_referrals(app)
+    install_standing(app)
     event.listen(Users, "before_insert", default_website, propagate=True)
     bp = Blueprint("cyberpaw", __name__)
 

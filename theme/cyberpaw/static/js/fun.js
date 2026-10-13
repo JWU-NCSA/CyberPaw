@@ -298,12 +298,14 @@
   };
 
   // Competition status from the start and end times in the admin config: a ticking countdown to the start
-  // or the end, or "Competition ended". Once it has started with no end time set, the card is removed.
+  // or the end, or "Competition ended". While it is live the card is removed, unless the admin turned on the
+  // live countdown (admin home switch); with no end time set, it is always removed once it has started.
   function competitionStatus() {
     const box = document.querySelector("[data-cp-status]");
     if (!box) return;
     const start = Number(window.init && window.init.start) || 0;
     const end = Number(window.init && window.init.end) || 0;
+    const showLive = Boolean(window.init && window.init.liveCountdown);
     const label = el("div", "cp-countdown-label");
     const units = ["Days", "Hours", "Minutes", "Seconds"].map((name) => {
       const unit = el("div", "cp-unit");
@@ -333,6 +335,10 @@
         counting = true;
         label.textContent = "Competition starts in";
         target = start;
+      } else if (end && now < end && !showLive) {
+        // Live, and the admin hid the live countdown: no card until the end, then "Competition ended".
+        box.hidden = true;
+        return;
       } else if (end && now < end) {
         panel.dataset.state = "live";
         label.replaceChildren(el("span", "cp-live-dot"), document.createTextNode("Live now · ends in"));
@@ -344,6 +350,7 @@
           box.remove();
           return;
         }
+        box.hidden = false;
         panel.dataset.state = "over";
         label.replaceChildren(document.createTextNode("Competition ended. Thanks for playing! 🐾"));
         clock.hidden = true;
@@ -517,9 +524,371 @@
     });
   }
 
+  // ---------------------------------------------------------------- share cards and share buttons
+  // Square images to share, like the certificates on Hack The Box: "challenge solved" after a solve (the
+  // challenge window, templates/challenge.html) and the player's final place after the competition (home
+  // page, templates/page.html). Each is drawn on a canvas from the data-* attributes of its [data-cp-card]
+  // element, shown above the share buttons and used by the Download and Instagram buttons. The challenge
+  // window creates its panel later, so the buttons are handled on the document.
+  const CARD_SIZE = 1080;
+  const cards = new WeakMap(); // [data-cp-card] element -> Promise of the PNG blob
+
+  function loadImage(src) {
+    return new Promise((resolve) => {
+      if (!src) return resolve(null);
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  // The largest font size (down to `min`) at which `text` fits in `maxLines` lines. If it still doesn't fit,
+  // lines that are too wide and the last line (when text is left over) end in an ellipsis.
+  function fitLines(ctx, text, font, maxWidth, maxLines, max, min) {
+    let size = max;
+    let lines = [];
+    for (; size >= min; size -= 4) {
+      ctx.font = font(size);
+      lines = [];
+      let line = "";
+      for (const word of text.split(/\s+/)) {
+        const next = line ? line + " " + word : word;
+        if (line && ctx.measureText(next).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = next;
+        }
+      }
+      lines.push(line);
+      if (lines.length <= maxLines && lines.every((l) => ctx.measureText(l).width <= maxWidth)) return { size, lines };
+    }
+    size = min;
+    ctx.font = font(size);
+    const more = lines.length > maxLines;
+    lines = lines.slice(0, maxLines).map((line, i) => {
+      if (!(more && i === maxLines - 1) && ctx.measureText(line).width <= maxWidth) return line;
+      while (line && ctx.measureText(line + "…").width > maxWidth) line = line.slice(0, -1);
+      return line + "…";
+    });
+    return { size, lines };
+  }
+
+  function paw(ctx, x, y, scale, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.scale(scale, scale);
+    ctx.beginPath();
+    ctx.ellipse(0, 18, 30, 25, 0, 0, Math.PI * 2);
+    [[-34, -14, -0.4], [-13, -34, -0.15], [13, -34, 0.15], [34, -14, 0.4]].forEach(([tx, ty, r]) => {
+      ctx.moveTo(tx + 11, ty);
+      ctx.ellipse(tx, ty, 11, 15, r, 0, Math.PI * 2);
+    });
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // A rounded translucent label 60px tall, centered, with its top at y (textBaseline "top").
+  function drawPill(ctx, text, font, y) {
+    const S = CARD_SIZE;
+    ctx.font = font(600)(32);
+    const w = ctx.measureText(text).width + 64;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect((S - w) / 2, y, w, 60, 30);
+    else ctx.rect((S - w) / 2, y, w, 60);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.fillText(text, S / 2, y + 13);
+  }
+
+  function spacedHeading(ctx, text, font, y) {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.font = font(700)(34);
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "8px";
+    ctx.fillText(text, CARD_SIZE / 2 + 4, y);
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  }
+
+  // Check mark badge, "challenge solved", the challenge name, category and points, and the player.
+  function solveBody(ctx, data, blue, font) {
+    const S = CARD_SIZE;
+    // Check mark badge and "challenge solved".
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(S / 2, 370, 46, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = blue;
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(S / 2 - 22, 372);
+    ctx.lineTo(S / 2 - 6, 388);
+    ctx.lineTo(S / 2 + 24, 354);
+    ctx.stroke();
+    spacedHeading(ctx, "CHALLENGE SOLVED", font, 470);
+
+    // The rest is stacked and centered between the heading and the footer.
+    const pill = [data.category, data.points ? `${data.points} pts` : ""].filter(Boolean).join("  ·  ");
+    const who = data.player && fitLines(ctx, data.player, font(700), 860, 1, 48, 30);
+    const rest = (pill ? 40 + 60 : 0) + (who ? 56 + 34 + 10 + who.size : 0);
+    // Shrink the title until the whole stack fits.
+    let title;
+    for (let max = 96; ; max -= 4) {
+      title = fitLines(ctx, data.challenge, font(800), 900, 3, max, 44);
+      if (max <= 44 || title.lines.length * Math.round(title.size * 1.15) + rest <= 980 - 510) break;
+    }
+    const lineHeight = Math.round(title.size * 1.15);
+    const height = title.lines.length * lineHeight + rest;
+    let y = 510 + Math.max(0, (980 - 510 - height) / 2);
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#fff";
+    ctx.font = font(800)(title.size);
+    title.lines.forEach((line) => {
+      ctx.fillText(line, S / 2, y + (lineHeight - title.size) / 2);
+      y += lineHeight;
+    });
+    if (pill) {
+      y += 40;
+      drawPill(ctx, pill, font, y);
+      y += 60;
+    }
+    if (who) {
+      y += 56;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.font = font(500)(34);
+      ctx.fillText("Solved by", S / 2, y);
+      y += 34 + 10;
+      ctx.fillStyle = "#fff";
+      ctx.font = font(700)(who.size);
+      ctx.fillText(who.lines[0], S / 2, y);
+    }
+    ctx.textBaseline = "alphabetic";
+  }
+
+  // Final standing: a medal with the place (gold, silver and bronze for the top three), out of how many
+  // players, score and solves, and the player.
+  const MEDALS = { 1: ["#F5B021", "#FFD66B"], 2: ["#AEB8C4", "#E3E8EE"], 3: ["#B8733A", "#E0A574"] };
+
+  function standingBody(ctx, data, blue, font) {
+    const S = CARD_SIZE;
+    const place = Number(data.place);
+    spacedHeading(ctx, place === 1 ? "CHAMPION" : place <= 3 ? "PODIUM FINISH" : "FINAL STANDING", font, 350);
+
+    const cx = S / 2;
+    const cy = 535;
+    const r = 140;
+    const medal = MEDALS[place];
+    if (medal) {
+      const shine = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+      shine.addColorStop(0, medal[1]);
+      shine.addColorStop(1, medal[0]);
+      ctx.fillStyle = shine;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 18, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.lineWidth = 6;
+      ctx.stroke();
+    }
+
+    // "12th": the number large, the suffix small and raised, centered together in the medal.
+    const [, num = String(place), suffix = ""] = /^(\d+)(\D*)$/.exec(data.ordinal || "") || [];
+    ctx.fillStyle = medal ? "#1b2a4a" : "#fff";
+    ctx.textBaseline = "alphabetic";
+    const numSize = num.length > 2 ? 96 : 150;
+    ctx.font = font(800)(numSize);
+    const numW = ctx.measureText(num).width;
+    ctx.font = font(700)(56);
+    const sufW = ctx.measureText(suffix).width;
+    const left = cx - (numW + sufW + 4) / 2;
+    ctx.textAlign = "left";
+    ctx.font = font(800)(numSize);
+    ctx.fillText(num, left, cy + numSize * 0.36);
+    ctx.font = font(700)(56);
+    ctx.fillText(suffix, left + numW + 4, cy + numSize * 0.36 - numSize * 0.45);
+    ctx.textAlign = "center";
+
+    ctx.textBaseline = "top";
+    let y = cy + r + 34;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.font = font(600)(38);
+    ctx.fillText(`out of ${Number(data.players).toLocaleString()} players`, cx, y);
+    y += 38 + 26;
+    const solves = Number(data.solves);
+    drawPill(ctx, `${Number(data.score).toLocaleString()} pts  ·  ${solves} solve${solves === 1 ? "" : "s"}`, font, y);
+    y += 60 + 34;
+    if (data.player) {
+      const who = fitLines(ctx, data.player, font(700), 860, 1, 52, 30);
+      ctx.fillStyle = "#fff";
+      ctx.font = font(700)(who.size);
+      ctx.fillText(who.lines[0], cx, y);
+    }
+    ctx.textBaseline = "alphabetic";
+  }
+
+  async function drawCard(data) {
+    const S = CARD_SIZE;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = S;
+    const ctx = canvas.getContext("2d");
+    const css = getComputedStyle(document.documentElement);
+    const blue = css.getPropertyValue("--cp-blue").trim() || "#2664A2";
+    const dark = css.getPropertyValue("--cp-blue-dark").trim() || "#0D4B89";
+    const family = getComputedStyle(document.body).fontFamily || "sans-serif";
+    const font = (weight) => (size) => `${weight} ${size}px ${family}`;
+    const logo = await loadImage(data.logo);
+
+    // Blue background with faint binary and paw prints, white header with the logo.
+    const bg = ctx.createLinearGradient(0, 0, S, S);
+    bg.addColorStop(0, blue);
+    bg.addColorStop(1, dark);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.035)";
+    ctx.font = `600 22px ui-monospace, monospace`;
+    for (let row = 0, y = 330; y < S; row++, y += 34) {
+      let bits = "";
+      for (let i = 0; i < 80; i++) bits += (i * 7 + row * 13 + ((i * row) % 5)) % 3 ? "1" : "0";
+      ctx.fillText(bits, -((row * 17) % 40), y);
+    }
+    ctx.fillStyle = "rgba(255, 255, 255, 0.07)";
+    paw(ctx, 140, 980, 1.6, -0.5);
+    paw(ctx, 950, 430, 1.3, 0.45);
+    paw(ctx, 980, 900, 0.9, 0.2);
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, S, 280);
+    if (logo) {
+      const h = 200;
+      const w = (logo.width / logo.height) * h;
+      ctx.drawImage(logo, (S - w) / 2, 40, w, h);
+    } else {
+      ctx.fillStyle = blue;
+      ctx.textAlign = "center";
+      ctx.font = font(800)(90);
+      ctx.fillText(data.ctf, S / 2, 175);
+    }
+
+    ctx.textAlign = "center";
+    (data.cpCard === "standing" ? standingBody : solveBody)(ctx, data, blue, font);
+
+    // Footer.
+    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+    ctx.font = font(500)(26);
+    const date = new Date(Number(data.end) * 1000 || Date.now()).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    ctx.fillText([data.ctf, data.site, date].filter(Boolean).join("  ·  "), S / 2, 1035);
+
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  }
+
+  function cardFor(section) {
+    if (!cards.has(section)) cards.set(section, drawCard({ ...section.dataset }));
+    return cards.get(section);
+  }
+
+  async function showCard(section) {
+    const img = section.querySelector(".cp-share-card");
+    if (!img || !img.hidden) return;
+    const blob = await cardFor(section);
+    if (!blob) return;
+    img.src = URL.createObjectURL(blob);
+    img.hidden = false;
+  }
+
+  function cardFileName(section) {
+    if (section.dataset.cpCard === "standing") return "cyberpaw-final-standing.png";
+    const slug = (section.dataset.challenge || "challenge").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return `cyberpaw-${slug || "challenge"}.png`;
+  }
+
+  function downloadCard(blob, name) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+
+  function shareCards() {
+    // Final standing on the home page: move it under the competition status, like the invite link.
+    const final = document.querySelector("#cp-final[hidden]");
+    const home = document.querySelector(".cp-home");
+    if (final && home) {
+      const status = home.querySelector("[data-cp-status]");
+      if (status) status.after(final);
+      else home.append(final);
+      final.hidden = false;
+      showCard(final);
+    }
+
+    window.addEventListener("cp-flag-result", (event) => {
+      const status = event.detail && event.detail.status;
+      if (status !== "correct" && status !== "already_solved") return;
+      const section = event.target instanceof Element && event.target.querySelector('[data-cp-card="solve"]');
+      if (section) showCard(section);
+    });
+
+    document.addEventListener("click", async (event) => {
+      const download = event.target.closest("[data-cp-card-download]");
+      const instagram = event.target.closest("[data-cp-instagram]");
+      if (!download && !instagram) return;
+      const section = event.target.closest("[data-cp-card]");
+      if (!section) return;
+      const blob = await cardFor(section);
+      const name = cardFileName(section);
+      if (download) {
+        if (blob) downloadCard(blob, name);
+        return;
+      }
+
+      // Instagram has no web share link. Phones get the system share sheet with the image and caption
+      // (Instagram is listed there); elsewhere the image is downloaded, the caption copied and Instagram
+      // opened in a new tab.
+      const caption = instagram.dataset.cpInstagram;
+      const file = blob && new File([blob], name, { type: "image/png" });
+      if (matchMedia("(pointer: coarse)").matches && navigator.share) {
+        const shareData = file && navigator.canShare && navigator.canShare({ files: [file] })
+          ? { files: [file], text: caption }
+          : { text: caption };
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch (e) {
+          if (e.name === "AbortError") return;
+        }
+      }
+      // Copy before opening the tab: the clipboard only works while this page has focus.
+      try {
+        await navigator.clipboard.writeText(caption);
+        toast(blob ? "Image saved and caption copied. Post them on Instagram." : "Caption copied. Paste it into your Instagram post.");
+      } catch (e) {
+        toast(caption);
+      }
+      if (blob) downloadCard(blob, name);
+      window.open("https://www.instagram.com/", "_blank", "noopener");
+    });
+  }
+
   const start = () => {
     profileSettings();
     referralCopy();
+    shareCards();
     oneTabConfirm();
     showMotd();
     homeActions();

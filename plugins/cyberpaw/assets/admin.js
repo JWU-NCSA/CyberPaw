@@ -59,9 +59,9 @@
     select.addEventListener("change", () => save(CHALLENGE_ID, select.value, status));
   }
 
-  // Admin settings CyberPaw doesn't use: brackets, custom fields, languages, social sharing, MLC, and
+  // Admin settings CyberPaw doesn't use: brackets, custom fields, languages, MLC, and
   // teams (the site is individual players only).
-  const HIDDEN_CONFIG_SECTIONS = ["#brackets", "#fields", "#mlc", "#social", "#localization", "#usermode"];
+  const HIDDEN_CONFIG_SECTIONS = ["#brackets", "#fields", "#mlc", "#localization", "#usermode"];
 
   // CyberPaw assumes English, the US and JWU: hide language, country and affiliation inputs and columns
   // in admin forms and tables (they are loaded into modals later, so keep watching).

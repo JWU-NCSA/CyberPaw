@@ -53,6 +53,7 @@ curl -s -o /dev/null -c "$JAR" -b "$JAR" $B/logout
 
 echo "== guest"
 curl -s $B/ | grep -q 'cp-home' || fail "home page"
+curl -s $B/ | grep -q "'liveCountdown'" || fail "live countdown setting on home page"
 [ "$(curl -s -o /dev/null -w '%{redirect_url}' $B/challenges | sed "s#^$B##")" = "/login?next=%2Fchallenges" ] \
   || fail "guest /challenges should go to login"
 
