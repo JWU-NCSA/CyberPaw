@@ -4,7 +4,7 @@
 {% set add_open = errors or request.args.get('add') %}
 <div class="container cp-home">
 
-  {# Status: two switches and one line of numbers #}
+  {# Status: three switches and one line of numbers #}
   <div class="cp-status">
     <div class="custom-control custom-switch">
       <input type="checkbox" class="custom-control-input cp-switch" id="cp-competition"
@@ -21,6 +21,15 @@
              data-on-label="Open" data-off-label="Closed" {{ 'checked' if registration_open }}>
       <label class="custom-control-label" for="cp-registration">
         Registration <span class="cp-switch-state">{{ "Open" if registration_open else "Closed" }}</span>
+      </label>
+    </div>
+    <div class="custom-control custom-switch">
+      <input type="checkbox" class="custom-control-input cp-switch" id="cp-live-countdown"
+             data-url="{{ url_for('cyberpaw_admin.set_live_countdown') }}"
+             data-on-label="Shown" data-off-label="Hidden" {{ 'checked' if live_countdown }}>
+      <label class="custom-control-label" for="cp-live-countdown"
+             title="The &quot;Live now · ends in&quot; countdown on the home page while the competition runs">
+        Live countdown <span class="cp-switch-state">{{ "Shown" if live_countdown else "Hidden" }}</span>
       </label>
     </div>
     <div class="text-muted small ml-md-auto">{{ players }} players · {{ total_solves }} solves · {{ wrong_today }} wrong flags today</div>
