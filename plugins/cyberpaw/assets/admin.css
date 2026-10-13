@@ -93,7 +93,7 @@ a {
 }
 .cp-row {
   display: grid;
-  grid-template-columns: 1fr 6.5rem 11rem 6.5rem;
+  grid-template-columns: 1fr 6.5rem 11rem 8rem 6.5rem;
   align-items: center;
   gap: 1rem;
   padding: 0.55rem 0.25rem;
@@ -125,9 +125,31 @@ a {
 .cp-row-switch {
   justify-self: end;
 }
+.cp-row-reviews {
+  color: #6c757d;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  justify-self: start;
+  padding: 0;
+}
+.cp-row-reviews:disabled {
+  opacity: 0.45;
+}
+.cp-reviews {
+  grid-column: 1 / -1;
+  padding: 0.25rem 0.5rem 0.5rem;
+  border-left: 3px solid #e9ecef;
+}
+.cp-review + .cp-review {
+  margin-top: 0.6rem;
+}
+.cp-review-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 576px) {
   .cp-row {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
   }
   .cp-row .cp-tri,
   .cp-row-meta {
