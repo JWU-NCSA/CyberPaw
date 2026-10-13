@@ -75,6 +75,7 @@ def page_context():
         state=state,
         registration_open=get_config("registration_visibility") == "public",
         paused=bool(get_config("paused")),
+        live_countdown=bool(get_config("cp_live_countdown")),
         players=Users.query.filter_by(type="user").count(),
         total_solves=Solves.query.count(),
         wrong_today=Fails.query.filter(Fails.date >= now - datetime.timedelta(hours=24)).count(),
@@ -131,6 +132,16 @@ def set_competition():
     clear_challenges()
     clear_standings()
     return jsonify(success=True, on=running)
+
+
+# Off by default: once the competition is live, the home page drops the "Live now · ends in" card.
+@admin_pages.route("/admin/cyberpaw/live-countdown", methods=["POST"])
+@admins_only
+def set_live_countdown():
+    shown = switch_value()
+    set_config("cp_live_countdown", shown)
+    clear_config()
+    return jsonify(success=True, on=shown)
 
 
 @admin_pages.route("/admin/cyberpaw/challenges/<int:challenge_id>/visible", methods=["POST"])

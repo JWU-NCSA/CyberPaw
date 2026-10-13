@@ -32,6 +32,7 @@
           'teamName': {{ Team.name | tojson }},
           'start': {{ Configs.start | tojson }},
           'end': {{ Configs.end | tojson }},
+          'liveCountdown': {{ get_config('cp_live_countdown') | tojson }},
           'themeSettings': {{ Configs.theme_settings | tojson }},
           'eventSounds': [
             "/themes/core/static/sounds/notification.webm",

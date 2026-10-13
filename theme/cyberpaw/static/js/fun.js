@@ -298,12 +298,14 @@
   };
 
   // Competition status from the start and end times in the admin config: a ticking countdown to the start
-  // or the end, or "Competition ended". Once it has started with no end time set, the card is removed.
+  // or the end, or "Competition ended". While it is live the card is removed, unless the admin turned on the
+  // live countdown (admin home switch); with no end time set, it is always removed once it has started.
   function competitionStatus() {
     const box = document.querySelector("[data-cp-status]");
     if (!box) return;
     const start = Number(window.init && window.init.start) || 0;
     const end = Number(window.init && window.init.end) || 0;
+    const showLive = Boolean(window.init && window.init.liveCountdown);
     const label = el("div", "cp-countdown-label");
     const units = ["Days", "Hours", "Minutes", "Seconds"].map((name) => {
       const unit = el("div", "cp-unit");
@@ -333,6 +335,10 @@
         counting = true;
         label.textContent = "Competition starts in";
         target = start;
+      } else if (end && now < end && !showLive) {
+        // Live, and the admin hid the live countdown: no card until the end, then "Competition ended".
+        box.hidden = true;
+        return;
       } else if (end && now < end) {
         panel.dataset.state = "live";
         label.replaceChildren(el("span", "cp-live-dot"), document.createTextNode("Live now · ends in"));
@@ -344,6 +350,7 @@
           box.remove();
           return;
         }
+        box.hidden = false;
         panel.dataset.state = "over";
         label.replaceChildren(document.createTextNode("Competition ended. Thanks for playing! 🐾"));
         clock.hidden = true;
