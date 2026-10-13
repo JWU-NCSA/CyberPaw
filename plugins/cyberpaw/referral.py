@@ -22,6 +22,8 @@ REFERRER_CAP = 300
 NEW_PLAYER_POINTS = 25
 AWARD_CATEGORY = "Referral"
 SESSION_KEY = "cp_ref"
+# Config -> Accounts: show "Referred by" and "Referrals" columns on the admin Users page.
+ADMIN_COLUMNS_SETTING = "cyberpaw_admin_referrals"
 
 
 class CyberpawReferral(db.Model):
@@ -132,6 +134,23 @@ def referral_info(user_id):
         "cap": REFERRER_CAP,
         "new_player_points": NEW_PLAYER_POINTS,
     }
+
+
+def admin_overview():
+    """For the admin Users page: who referred each player, and each referrer's used referral slots."""
+    counted = {}
+    for rid in counting_referrals().values():
+        counted[rid] = counted.get(rid, 0) + 1
+    referred_by = {}
+    totals = {}
+    for row, name in db.session.query(CyberpawReferral, Users.name).join(Users, Users.id == CyberpawReferral.referrer_id):
+        referred_by[row.user_id] = {"id": row.referrer_id, "name": name}
+        totals[row.referrer_id] = totals.get(row.referrer_id, 0) + 1
+    referrers = {
+        rid: {"used": min(counted.get(rid, 0), max_referrals()), "counted": counted.get(rid, 0), "total": total}
+        for rid, total in totals.items()
+    }
+    return {"max": max_referrals(), "referred_by": referred_by, "referrers": referrers}
 
 
 def install(app):

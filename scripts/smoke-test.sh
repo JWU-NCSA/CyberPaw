@@ -44,9 +44,10 @@ bash scripts/apply-config.sh "$COMPOSE_DIR" | tail -1 | grep -q "Applied CyberPa
 echo "== admin pages"
 N=$(nonce /login)
 post /login --data-urlencode name=admin --data-urlencode password=SmokeTest-Admin-1 --data-urlencode "nonce=$N" >/dev/null
-for page in /admin/cyberpaw /admin/config; do
+for page in /admin/cyberpaw /admin/config /admin/users; do
   [ "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" $B$page)" = 200 ] || fail "$page"
 done
+curl -s -b "$JAR" $B/admin/cyberpaw/referrals | grep -q '"enabled":true' || fail "admin referral columns"
 # Competition starts in 5 days; no email confirmation (there is no mail server here).
 api_config "{\"start\": $(( $(date +%s) + 5 * 86400 )), \"verify_emails\": false}"
 curl -s -o /dev/null -c "$JAR" -b "$JAR" $B/logout
