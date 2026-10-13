@@ -38,6 +38,8 @@ SETTINGS = {
 DEFAULTS = {
     # Extra points for the first solver of each challenge (Config -> Challenges, plugins/cyberpaw/first_paw.py).
     "cyberpaw_first_solve_bonus": 1,
+    # "Referred by" and "Referrals" columns on the admin Users page (Config -> Accounts, plugins/cyberpaw/referral.py).
+    "cyberpaw_admin_referrals": True,
     # Postfix on the VM (config/postfix-setup.sh), reached from the container as host.docker.internal.
     "mail_server": "host.docker.internal",
     "mail_port": 25,

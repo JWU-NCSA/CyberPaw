@@ -185,6 +185,82 @@
     form.querySelector("button[type=submit]").before(group);
   }
 
+  // Referral columns on the admin Users page (plugins/cyberpaw/referral.py). The data comes from
+  // /admin/cyberpaw/referrals, which says whether the setting in Config -> Accounts is on.
+  async function fetchReferrals() {
+    try {
+      const res = await fetch(`${init.urlRoot}/admin/cyberpaw/referrals`, { credentials: "same-origin" });
+      return res.ok ? await res.json() : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Config -> Accounts: on/off for the referral columns. Saved by the tab's own Update button, like the
+  // First solve bonus.
+  async function adminReferralsSetting() {
+    const form = document.querySelector("#accounts form");
+    if (!form || !location.pathname.startsWith(`${init.urlRoot}/admin/config`)) return;
+    const data = await fetchReferrals();
+    const group = document.createElement("div");
+    group.className = "form-group";
+    const label = document.createElement("label");
+    label.htmlFor = "cp-admin-referrals";
+    label.textContent = "Referral columns on the Users page";
+    const select = document.createElement("select");
+    select.id = "cp-admin-referrals";
+    select.name = "cyberpaw_admin_referrals";
+    select.className = "form-control custom-select";
+    [["true", "On"], ["false", "Off"]].forEach(([value, text]) => select.append(new Option(text, value)));
+    select.value = data && data.enabled ? "true" : "false";
+    const help = document.createElement("small");
+    help.className = "form-text text-muted";
+    help.textContent =
+      "Adds \"Referred by\" (the player whose invite link they signed up with) and \"Referrals\" (invite " +
+      "bonuses used out of the maximum) to Admin -> Users. Only admins see them.";
+    group.append(label, select, help);
+    form.querySelector("button[type=submit]").before(group);
+  }
+
+  async function userReferralColumns() {
+    if (location.pathname.replace(/\/$/, "") !== `${init.urlRoot}/admin/users`) return;
+    const table = document.querySelector("#teamsboard");
+    if (!table) return;
+    const data = await fetchReferrals();
+    if (!data || !data.enabled) return;
+    const headerRow = table.querySelector("thead tr");
+    [["Referred by", ""], ["Referrals", `Invite bonuses used out of ${data.max}`]].forEach(([text, title]) => {
+      const th = document.createElement("th");
+      th.className = "text-center";
+      th.title = title;
+      const b = document.createElement("b");
+      b.textContent = text;
+      th.append(b);
+      headerRow.append(th);
+    });
+    table.querySelectorAll("tbody tr[name]").forEach((row) => {
+      const id = row.getAttribute("name");
+      const by = document.createElement("td");
+      by.className = "text-center";
+      const referrer = data.referred_by[id];
+      if (referrer) {
+        const a = document.createElement("a");
+        a.href = `${init.urlRoot}/admin/users/${referrer.id}`;
+        a.textContent = referrer.name;
+        // The row itself links to the referred player; this link goes to the referrer instead.
+        a.addEventListener("click", (e) => e.stopPropagation());
+        by.append(a);
+      }
+      const used = document.createElement("td");
+      used.className = "text-center text-nowrap";
+      const stats = data.referrers[id] || { used: 0, counted: 0, total: 0 };
+      used.textContent = `${stats.used}/${data.max}`;
+      const waiting = stats.total - stats.counted;
+      used.title = `${stats.total} signed up with their link` + (waiting ? `, ${waiting} not counted yet (no solve or not confirmed)` : "");
+      row.append(by, used);
+    });
+  }
+
   // One Submissions page: All / Correct / Incorrect filter buttons instead of three menu entries.
   function submissionFilters() {
     const base = `${init.urlRoot}/admin/submissions`;
@@ -209,6 +285,8 @@
     hideConfigSections();
     legalPageLinks();
     firstSolveBonusSetting();
+    adminReferralsSetting();
+    userReferralColumns();
     submissionFilters();
     hideLanguageAndCountry();
     new MutationObserver(hideLanguageAndCountry).observe(document.body, { childList: true, subtree: true });
