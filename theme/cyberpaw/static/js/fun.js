@@ -122,6 +122,11 @@
         input.classList.add("cp-shake");
         input.addEventListener("animationend", () => input.classList.remove("cp-shake"), { once: true });
       }
+    } else if (status === "bonus") {
+      // Bonus flag (plugins/cyberpaw/bonus_flag.py): extra points, the challenge itself is not solved by it.
+      if (quip) quip.textContent = "";
+      burst();
+      refreshRank(true);
     } else if (quip) {
       quip.textContent = "";
     }

@@ -9,6 +9,10 @@ Adds a 1-5 difficulty rating to challenges, like the 2024 site:
 
 First solve bonus (first_paw.py): optional extra points for each First Paw, set in Config -> Challenges.
 
+Scheduled release (release.py): a hidden challenge becomes visible at a set time.
+
+Bonus flag (bonus_flag.py): an optional second flag on a challenge, worth its own points.
+
 Admin pages (admin_pages.py): /admin/cyberpaw dashboard, challenge list with a visible/hidden
 toggle, and a one-page challenge upload form. CyberPaw styling and a shorter menu (assets/).
 
@@ -41,7 +45,9 @@ from flask import Blueprint, abort, jsonify, redirect, render_template, request,
 from sqlalchemy import event
 
 # Importing these modules registers their tables, which load() creates with create_all().
+from .bonus_flag import install as install_bonus_flag
 from .first_paw import first_solvers, install as install_first_paw
+from .release import install as install_release
 from .profile import install as install_profiles
 from .referral import install as install_referrals
 from .standing import install as install_standing
@@ -124,6 +130,8 @@ def load(app):
     install_html_email()
     install_profiles(app)
     install_first_paw(app)
+    install_release(app)
+    install_bonus_flag(app)
     install_referrals(app)
     install_standing(app)
     event.listen(Users, "before_insert", default_website, propagate=True)
