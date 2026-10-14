@@ -200,7 +200,7 @@
                   <div class="alert text-center w-100 mt-3"
                       x-effect="$dispatch('cp-flag-result', { status: response.data.status, challenge: id, ref: response })"
                       :class="{
-                        'alert-success': response.data.status == 'correct',
+                        'alert-success': response.data.status == 'correct' || response.data.status == 'bonus',
                         'alert-info': response.data.status == 'already_solved',
                         'alert-danger': response.data.status == 'incorrect',
                         'alert-warning': response.data.status == 'paused',

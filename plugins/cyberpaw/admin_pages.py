@@ -16,6 +16,9 @@ from .platform_api import (
     is_admin, set_config, upload_file,
 )
 
+from .bonus_flag import CyberpawBonusFlag, set_bonus
+from .release import CyberpawChallengeRelease
+
 TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 DIFFICULTY_LABELS = {1: "1 - Easy", 2: "2", 3: "3 - Medium", 4: "4", 5: "5 - Hard"}
 
@@ -57,6 +60,7 @@ def page_context():
         db.session.query(Solves.challenge_id, func.count(Solves.id)).group_by(Solves.challenge_id)
     )
     difficulty = dict(db.session.query(Meta.challenge_id, Meta.difficulty))
+    bonus = dict(db.session.query(CyberpawBonusFlag.challenge_id, CyberpawBonusFlag.points))
     # Player ratings: thumbs up/down counts and the optional written reviews, newest first. Admins only.
     ratings = {}
     rows = (
@@ -84,6 +88,7 @@ def page_context():
                 "dynamic": chal.type == "dynamic",
                 "visible": chal.state == "visible",
                 "difficulty": difficulty.get(chal.id, 0),
+                "bonus": bonus.get(chal.id),
                 "solves": solves.get(chal.id, 0),
                 "ratings": ratings.get(chal.id, {"up": 0, "down": 0, "reviews": []}),
             }
@@ -179,10 +184,64 @@ def set_challenge_visible(challenge_id):
     chal = Challenges.query.filter_by(id=challenge_id).first_or_404()
     visible = switch_value()
     chal.state = "visible" if visible else "hidden"
+    CyberpawChallengeRelease.query.filter_by(challenge_id=challenge_id).delete()
     db.session.commit()
     clear_challenges()
     clear_standings()
     return jsonify(success=True, on=visible)
+
+
+# Release time field on the challenge edit page (assets/admin.js). POST {"at": epoch seconds or null}.
+@admin_pages.route("/admin/cyberpaw/challenges/<int:challenge_id>/release", methods=["GET", "POST"])
+@admins_only
+def challenge_release(challenge_id):
+    chal = Challenges.query.filter_by(id=challenge_id).first_or_404()
+    row = CyberpawChallengeRelease.query.filter_by(challenge_id=challenge_id).first()
+    if request.method == "POST":
+        at = (request.get_json(silent=True) or {}).get("at")
+        if at is None:
+            if row is not None:
+                db.session.delete(row)
+            row = None
+        else:
+            errors = []
+            when = release_time({"release_at": str(at)}, errors)
+            if chal.state == "visible":
+                errors.append("This challenge is already visible. Hide it first, then set a release time.")
+            if errors:
+                return jsonify(success=False, message=" ".join(errors)), 400
+            if row is None:
+                row = CyberpawChallengeRelease(challenge_id=challenge_id)
+                db.session.add(row)
+            row.release_at = when
+        db.session.commit()
+    at = int(row.release_at.replace(tzinfo=datetime.timezone.utc).timestamp()) if row else None
+    return jsonify(success=True, at=at, visible=chal.state == "visible"), 200, {"Cache-Control": "no-store"}
+
+
+# Bonus flag fields on the challenge edit page (assets/admin.js). POST {"flag": text or null, "points": number}.
+@admin_pages.route("/admin/cyberpaw/challenges/<int:challenge_id>/bonus", methods=["GET", "POST"])
+@admins_only
+def challenge_bonus(challenge_id):
+    Challenges.query.filter_by(id=challenge_id).first_or_404()
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        errors = []
+        flag, points = bonus_fields(
+            {"bonus_flag": str(body.get("flag") or ""), "bonus_points": str(body.get("points", ""))}, errors
+        )
+        if flag and Flags.query.filter_by(challenge_id=challenge_id, content=flag).first():
+            errors.append("The bonus flag must be different from the challenge's flag.")
+        if errors:
+            return jsonify(success=False, message=" ".join(errors)), 400
+        set_bonus(challenge_id, flag, points)
+        db.session.commit()
+    row = CyberpawBonusFlag.query.filter_by(challenge_id=challenge_id).first()
+    return (
+        jsonify(success=True, flag=row.content if row else None, points=row.points if row else None),
+        200,
+        {"Cache-Control": "no-store"},
+    )
 
 
 def int_field(form, key, errors, label, minimum=0):
@@ -194,6 +253,35 @@ def int_field(form, key, errors, label, minimum=0):
     if value < minimum:
         errors.append(f"{label} must be at least {minimum}.")
     return value
+
+
+def bonus_fields(form, errors):
+    """The form's bonus flag and its points, or (None, None) when no bonus flag is set."""
+    flag = form.get("bonus_flag", "").strip()
+    if not flag:
+        return None, None
+    if len(flag) > 255:
+        errors.append("Bonus flag must be 255 characters or less.")
+    return flag, int_field(form, "bonus_points", errors, "Bonus points", 1)
+
+
+def release_time(form, errors):
+    """The form's release time as a UTC datetime, or None when not set."""
+    raw = form.get("release_at", "").strip()
+    if not raw:
+        return None
+    try:
+        when = datetime.datetime.utcfromtimestamp(int(raw))
+    except (ValueError, OverflowError, OSError):
+        errors.append("Release time is not valid.")
+        return None
+    if when <= datetime.datetime.utcnow():
+        errors.append("Release time must be in the future.")
+    if form.get("visible"):
+        errors.append("Pick either a release time or visible now, not both.")
+    return when
+
+
 
 
 def validate(form):
@@ -213,6 +301,10 @@ def validate(form):
         int_field(form, "points", errors, "Points", 0)
     if form.get("difficulty", "0") not in {"0", "1", "2", "3", "4", "5"}:
         errors.append("Pick a difficulty from the list.")
+    release_time(form, errors)
+    bonus_flag, _points = bonus_fields(form, errors)
+    if bonus_flag and bonus_flag == form.get("flag", "").strip():
+        errors.append("The bonus flag must be different from the flag.")
     return errors
 
 
@@ -241,6 +333,12 @@ def create_from_form(form, uploads):
     level = int(form.get("difficulty", "0"))
     if level:
         db.session.add(meta_model()(challenge_id=chal.id, difficulty=level))
+    when = release_time(form, [])
+    if when:
+        db.session.add(CyberpawChallengeRelease(challenge_id=chal.id, release_at=when))
+    bonus_flag, bonus_points = bonus_fields(form, [])
+    if bonus_flag:
+        set_bonus(chal.id, bonus_flag, bonus_points)
     db.session.commit()
 
     # Files are stored after the database rows exist. If any upload fails, remove the whole

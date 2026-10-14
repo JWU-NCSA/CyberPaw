@@ -59,6 +59,124 @@
     select.addEventListener("change", () => save(CHALLENGE_ID, select.value, status));
   }
 
+  // Edit page: release time (plugins/cyberpaw/release.py). A hidden challenge becomes visible at that time.
+  // The picker is local time; the server gets and returns UTC epoch seconds.
+  async function setupRelease() {
+    const container = document.getElementById("challenge-update-container");
+    const form = container && container.querySelector("form");
+    if (!form || typeof CHALLENGE_ID === "undefined" || form.querySelector(".cp-release-field")) return;
+    const url = `${init.urlRoot}/admin/cyberpaw/challenges/${CHALLENGE_ID}/release`;
+    const group = document.createElement("div");
+    group.className = "form-group mb-3 cp-release-field";
+    group.innerHTML = `
+      <label for="cp-release-edit">Release time<br>
+        <small class="form-text text-muted">A hidden challenge becomes visible to players at this time (your local time)</small>
+      </label>
+      <div class="d-flex">
+        <input class="form-control" type="datetime-local" id="cp-release-edit">
+        <button type="button" class="btn btn-outline-secondary ml-2 cp-release-save">Set</button>
+        <button type="button" class="btn btn-link text-muted cp-release-clear">Clear</button>
+      </div>
+      <small class="cp-release-status text-muted"></small>`;
+    const anchor = form.querySelector(".cp-difficulty-field") || form.querySelector('input[name="category"]')?.closest(".form-group");
+    if (anchor) anchor.after(group);
+    else form.prepend(group);
+    const input = group.querySelector("input");
+    const status = group.querySelector(".cp-release-status");
+
+    const show = (at) => {
+      // Epoch seconds to the picker's local "YYYY-MM-DDTHH:MM".
+      const d = at ? new Date(at * 1000) : null;
+      input.value = d ? new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "";
+    };
+    const send = async (at) => {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "CSRF-Token": init.csrfNonce },
+          body: JSON.stringify({ at }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          status.textContent = body.message || "Could not save release time";
+          return;
+        }
+        show(body.at);
+        status.textContent = body.at ? "Saved" : "No release time set";
+      } catch (e) {
+        status.textContent = "Could not save release time";
+      }
+    };
+    group.querySelector(".cp-release-save").addEventListener("click", () => {
+      if (!input.value) status.textContent = "Pick a date and time first";
+      else send(Math.floor(new Date(input.value).getTime() / 1000));
+    });
+    group.querySelector(".cp-release-clear").addEventListener("click", () => send(null));
+
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (res.ok) show((await res.json()).at);
+  }
+
+  // Edit page: bonus flag (plugins/cyberpaw/bonus_flag.py). A second flag worth its own points.
+  async function setupBonus() {
+    const container = document.getElementById("challenge-update-container");
+    const form = container && container.querySelector("form");
+    if (!form || typeof CHALLENGE_ID === "undefined" || form.querySelector(".cp-bonus-field")) return;
+    const url = `${init.urlRoot}/admin/cyberpaw/challenges/${CHALLENGE_ID}/bonus`;
+    const group = document.createElement("div");
+    group.className = "form-group mb-3 cp-bonus-field";
+    group.innerHTML = `
+      <label for="cp-bonus-edit">Bonus flag<br>
+        <small class="form-text text-muted">Optional second flag worth extra points. Players enter it in the normal flag box. Changing it clears who has found it.</small>
+      </label>
+      <div class="d-flex">
+        <input class="form-control text-monospace" id="cp-bonus-edit" maxlength="255" placeholder="CyberPaw{...}">
+        <input class="form-control ml-2" type="number" min="1" id="cp-bonus-points-edit" aria-label="Bonus points" title="Bonus points" style="max-width: 7rem">
+        <button type="button" class="btn btn-outline-secondary ml-2 cp-bonus-save">Set</button>
+        <button type="button" class="btn btn-link text-muted cp-bonus-clear">Clear</button>
+      </div>
+      <small class="cp-bonus-status text-muted"></small>`;
+    const anchor = form.querySelector(".cp-release-field, .cp-difficulty-field") || form.querySelector('input[name="category"]')?.closest(".form-group");
+    if (anchor) anchor.after(group);
+    else form.prepend(group);
+    const flag = group.querySelector("#cp-bonus-edit");
+    const points = group.querySelector("#cp-bonus-points-edit");
+    const status = group.querySelector(".cp-bonus-status");
+
+    const show = (data) => {
+      flag.value = data.flag || "";
+      points.value = data.points || 50;
+    };
+    const send = async (body) => {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "CSRF-Token": init.csrfNonce },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          status.textContent = data.message || "Could not save bonus flag";
+          return;
+        }
+        show(data);
+        status.textContent = data.flag ? "Saved" : "No bonus flag set";
+      } catch (e) {
+        status.textContent = "Could not save bonus flag";
+      }
+    };
+    group.querySelector(".cp-bonus-save").addEventListener("click", () => {
+      if (!flag.value.trim()) status.textContent = "Type a bonus flag first";
+      else send({ flag: flag.value, points: points.value });
+    });
+    group.querySelector(".cp-bonus-clear").addEventListener("click", () => send({ flag: null }));
+
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (res.ok) show(await res.json());
+  }
+
   // Admin settings CyberPaw doesn't use: brackets, custom fields, languages, MLC, and
   // teams (the site is individual players only).
   const HIDDEN_CONFIG_SECTIONS = ["#brackets", "#fields", "#mlc", "#localization", "#usermode"];
@@ -290,7 +408,7 @@
     submissionFilters();
     hideLanguageAndCountry();
     new MutationObserver(hideLanguageAndCountry).observe(document.body, { childList: true, subtree: true });
-    setupEdit();
+    setupEdit().finally(setupRelease).finally(setupBonus);
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
