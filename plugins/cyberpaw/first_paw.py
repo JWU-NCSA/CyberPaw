@@ -10,10 +10,11 @@ profile. The table `cyberpaw_first_paw_award` links each bonus award to its chal
 sync_awards() makes the awards match the current First Paws: it adds missing ones, moves them when the first
 solver changes (solve deleted, player hidden or banned, challenge hidden), updates the value when the setting
 changes, and removes them all when the bonus is off. It runs after any request that could change any of that.
-The same hook also syncs the referral bonuses (referral.py).
+The same hook also syncs the referral bonuses (referral.py) and the bonus flag awards (bonus_flag.py).
 """
 from flask import request
 
+from .bonus_flag import sync_awards as sync_bonus_flag_awards
 from .platform_api import Awards, Challenges, Solves, Users, clear_standings, db, get_config
 from .referral import sync_awards as sync_referral_awards
 
@@ -125,4 +126,9 @@ def install(app):
             except Exception:
                 db.session.rollback()
                 app.logger.exception("Referral bonus sync failed")
+            try:
+                sync_bonus_flag_awards()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception("Bonus flag award sync failed")
         return response
