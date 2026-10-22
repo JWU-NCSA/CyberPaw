@@ -60,7 +60,7 @@ curl -s $B/ | grep -q "'liveCountdown'" || fail "live countdown setting on home 
 
 echo "== player"
 N=$(nonce "/register?ref=1")
-post /register --data-urlencode name=player1 --data-urlencode email=player1@jwu.edu \
+post /register --data-urlencode name=player1 --data-urlencode email=J00000001@jwu.edu \
   --data-urlencode password=SmokeTest-Player-1 --data-urlencode "nonce=$N" >/dev/null
 curl -s -o /dev/null -c "$JAR" -b "$JAR" $B/logout
 N=$(nonce /login)
