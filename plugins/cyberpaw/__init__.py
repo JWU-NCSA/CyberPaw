@@ -50,6 +50,8 @@ from .first_paw import first_solvers, install as install_first_paw
 from .release import install as install_release
 from .profile import install as install_profiles
 from .referral import install as install_referrals
+from .signup_email import install as install_signup_email
+from .revoked import CyberpawRevokedAward
 from .standing import install as install_standing
 from .platform_api import (
     Challenges, UserConfirmTokenInvalidException, Users, admins_only, authed, check_challenge_visibility, check_score_visibility,
@@ -133,6 +135,7 @@ def load(app):
     install_release(app)
     install_bonus_flag(app)
     install_referrals(app)
+    install_signup_email(app)
     install_standing(app)
     event.listen(Users, "before_insert", default_website, propagate=True)
     bp = Blueprint("cyberpaw", __name__)
